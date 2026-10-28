@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="bg">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="StroiHub - намерете проверен майстор за вашия проект." />
+    <title>StroiHub — Намерете правилния майстор</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#" aria-label="StroiHub начало">
+        <span class="brand-mark">S</span>
+        <span>Stroi<span>Hub</span></span>
+      </a>
+      <nav class="main-nav" aria-label="Основна навигация">
+        <a class="active" href="#services">Услуги</a>
+        <a href="#how-it-works">Как работи</a>
+        <a href="#professionals">За майстори</a>
+      </nav>
+      <div class="header-actions">
+        <button class="link-button" type="button" data-auth="login">Вход</button>
+        <button class="link-button register-link" type="button" data-auth="register">Регистрация</button>
+        <button class="button button-dark" type="button" data-scroll-to="request">Публикувай проект</button>
+      </div>
+      <button class="menu-button" type="button" aria-label="Отвори меню" aria-expanded="false">☰</button>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-copy">
+          <div class="eyebrow"><span class="pulse"></span> Проверени професионалисти близо до вас</div>
+          <h1>Вашият проект.<br /><em>Правилният майстор.</em></h1>
+          <p>Намерете надежден специалист, сравнете оферти и започнете работа без излишно губене на време.</p>
+          <form class="search-panel" id="search-form">
+            <label>
+              <span>Какво ви е необходимо?</span>
+              <select id="service-filter">
+                <option value="all">Всички услуги</option>
+                <option value="Ремонт на баня">Ремонт на баня</option>
+                <option value="Боядисване">Боядисване</option>
+                <option value="Електро услуги">Електро услуги</option>
+                <option value="ВиК услуги">ВиК услуги</option>
+                <option value="Монтажи">Монтажи</option>
+              </select>
+            </label>
+            <label>
+              <span>Локация</span>
+              <input id="location-filter" type="text" placeholder="Напр. София" />
+            </label>
+            <button class="button button-primary" type="submit">Търси майстор <span>→</span></button>
+          </form>
+          <div class="trust-row"><strong>4.9/5</strong><span class="stars">★★★★★</span><span>от над 2 000 доволни клиенти</span></div>
+        </div>
+        <div class="hero-art" aria-label="Илюстрация на строителен проект">
+          <div class="sun"></div>
+          <div class="building building-back"></div>
+          <div class="building building-front"><i></i><i></i><i></i><i></i></div>
+          <div class="plant plant-one">⌁</div>
+          <div class="plant plant-two">⌁</div>
+          <div class="person"><span></span></div>
+          <div class="floating-note note-top"><b>✓</b><span><strong>Проверени</strong><small>професионалисти</small></span></div>
+          <div class="floating-note note-bottom"><strong>2 000+</strong><span>реализирани<br />проекта</span></div>
+        </div>
+      </section>
+
+      <section class="category-section" id="services">
+        <div class="section-heading">
+          <div><span class="section-kicker">Намерете услуга</span><h2>С какво можем да помогнем?</h2></div>
+          <a href="#professionals">Виж всички услуги <span>→</span></a>
+        </div>
+        <div class="category-grid">
+          <button class="category-card selected" data-category="all"><span class="category-icon">⌂</span><b>Всички услуги</b><small>124 майстори</small></button>
+          <button class="category-card" data-category="Ремонт на баня"><span class="category-icon">◈</span><b>Ремонт на баня</b><small>32 майстори</small></button>
+          <button class="category-card" data-category="Боядисване"><span class="category-icon">◒</span><b>Боядисване</b><small>28 майстори</small></button>
+          <button class="category-card" data-category="Електро услуги"><span class="category-icon">ϟ</span><b>Електро услуги</b><small>19 майстори</small></button>
+          <button class="category-card" data-category="Монтажи"><span class="category-icon">⌘</span><b>Монтажи</b><small>17 майстори</small></button>
+        </div>
+      </section>
+
+      <section class="professionals-section" id="professionals">
+        <div class="section-heading">
+          <div><span class="section-kicker">Препоръчани за вас</span><h2>Най-търсените майстори</h2></div>
+          <div class="result-count" id="result-count">124 резултата</div>
+        </div>
+        <div class="professional-grid" id="professional-grid"></div>
+      </section>
+
+      <section class="steps-section" id="how-it-works">
+        <div class="steps-intro"><span class="section-kicker">Лесно като 1–2–3</span><h2>От идея до готов проект.</h2><p>Ние се грижим да намерите човек, на когото можете да се доверите.</p></div>
+        <div class="steps">
+          <div class="step"><span>01</span><div class="step-icon">⌕</div><h3>Опишете проекта</h3><p>Кажете ни от какво имате нужда и къде се намира обектът.</p></div>
+          <div class="step"><span>02</span><div class="step-icon">♧</div><h3>Сравнете майстори</h3><p>Получете предложения от проверени специалисти с оценки.</p></div>
+          <div class="step"><span>03</span><div class="step-icon">✓</div><h3>Започнете работа</h3><p>Изберете най-подходящия човек и следете проекта си.</p></div>
+        </div>
+      </section>
+
+      <section class="request-section" id="request">
+        <div><span class="section-kicker">Готови ли сте да започнете?</span><h2>Разкажете ни за вашия проект.</h2><p>Публикуването е безплатно. Ще ви свържем с подходящи майстори.</p></div>
+        <form class="request-form" id="request-form">
+          <input required type="text" placeholder="Вашето име" aria-label="Вашето име" />
+          <input required type="tel" placeholder="Телефон за контакт" aria-label="Телефон за контакт" />
+          <textarea required placeholder="Какво трябва да бъде направено?" aria-label="Описание на проекта"></textarea>
+          <button class="button button-light" type="submit">Изпрати заявка <span>→</span></button>
+        </form>
+      </section>
+    </main>
+    <div class="auth-overlay" id="auth-overlay" hidden>
+      <section class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+        <button class="auth-close" type="button" aria-label="Затвори" data-auth-close>×</button>
+        <div class="auth-brand"><span class="brand-mark">S</span><span>Stroi<span>Hub</span></span></div>
+        <span class="section-kicker">Добре дошли</span>
+        <h2 id="auth-title">Влезте във вашия профил</h2>
+        <p class="auth-subtitle" id="auth-subtitle">Управлявайте проектите си и общувайте с майстори.</p>
+        <div class="auth-tabs" role="tablist">
+          <button class="auth-tab active" type="button" data-auth-mode="login" role="tab">Вход</button>
+          <button class="auth-tab" type="button" data-auth-mode="register" role="tab">Регистрация</button>
+        </div>
+        <form class="auth-form" id="auth-form">
+          <label class="register-only" hidden>Име и фамилия<input required type="text" name="name" autocomplete="name" placeholder="Напр. Иван Петров" /></label>
+          <label>Имейл адрес<input required type="email" name="email" autocomplete="email" placeholder="you@example.com" /></label>
+          <label>Парола<div class="password-field"><input required type="password" name="password" minlength="6" autocomplete="current-password" placeholder="Минимум 6 символа" /><button type="button" data-toggle-password aria-label="Покажи паролата">Покажи</button></div></label>
+          <label class="register-only" hidden>Повторете паролата<input required type="password" name="confirmPassword" minlength="6" autocomplete="new-password" placeholder="Въведете паролата отново" /></label>
+          <label class="remember-row login-only"><input type="checkbox" name="remember" /> Запомни ме <a href="#" data-toast="Ще добавим възстановяване на парола в следваща версия.">Забравена парола?</a></label>
+          <label class="terms-row register-only" hidden><input type="checkbox" name="terms" /> Приемам условията за ползване</label>
+          <button class="button button-primary auth-submit" type="submit">Вход</button>
+          <p class="auth-message" id="auth-message" role="status"></p>
+        </form>
+        <p class="auth-switch" id="auth-switch">Нямате профил? <button type="button" data-auth-mode="register">Създайте го безплатно</button></p>
+      </section>
+    </div>
+    <div class="profile-overlay" id="profile-overlay" hidden>
+      <section class="profile-modal" role="dialog" aria-modal="true" aria-labelledby="profile-title">
+        <button class="auth-close" type="button" aria-label="Затвори" data-profile-close>×</button>
+        <div class="profile-header">
+          <div class="avatar profile-avatar" id="profile-avatar"></div>
+          <div><span class="verified">✓ Проверен професионалист</span><h2 id="profile-title"></h2><p id="profile-service"></p></div>
+        </div>
+        <div class="profile-stats"><span><strong id="profile-rating"></strong><small>рейтинг</small></span><span><strong id="profile-reviews"></strong><small>оценки</small></span><span><strong>8 г.</strong><small>опит</small></span></div>
+        <p class="profile-description" id="profile-description"></p>
+        <div class="profile-tags"><span>Отговаря до 1 час</span><span>Работи с договор</span><span>Безплатна консултация</span></div>
+        <button class="button button-primary profile-contact" type="button" data-scroll-to="request">Изпрати запитване <span>→</span></button>
+      </section>
+    </div>
+    <div class="toast" id="toast" role="status"></div>
+    <script src="app.js"></script>
+  </body>
+</html>
