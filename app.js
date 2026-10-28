@@ -19,7 +19,16 @@ const authSubtitle = document.querySelector("#auth-subtitle");
 const authMessage = document.querySelector("#auth-message");
 const authSubmit = document.querySelector(".auth-submit");
 const profileOverlay = document.querySelector("#profile-overlay");
+const menuButton = document.querySelector(".menu-button");
+const mainNav = document.querySelector(".main-nav");
+const headerActions = document.querySelector(".header-actions");
 let authMode = "login";
+
+function closeMobileMenu() {
+  mainNav.classList.remove("mobile-open");
+  headerActions.classList.remove("mobile-open");
+  menuButton.setAttribute("aria-expanded", "false");
+}
 
 function renderProfessionals() {
   const service = serviceFilter.value;
@@ -102,6 +111,16 @@ function setAuthMode(mode) {
 }
 
 document.querySelectorAll("[data-auth]").forEach((button) => button.addEventListener("click", () => setAuthMode(button.dataset.auth)));
+menuButton.addEventListener("click", () => {
+  const isOpen = mainNav.classList.toggle("mobile-open");
+  headerActions.classList.toggle("mobile-open", isOpen);
+  menuButton.setAttribute("aria-expanded", String(isOpen));
+});
+document.querySelectorAll(".main-nav a").forEach((link) => link.addEventListener("click", () => {
+  document.querySelectorAll(".main-nav a").forEach((item) => item.classList.remove("active"));
+  link.classList.add("active");
+  closeMobileMenu();
+}));
 document.querySelector("[data-auth-close]").addEventListener("click", () => { authOverlay.hidden = true; });
 document.querySelector("[data-profile-close]").addEventListener("click", () => { profileOverlay.hidden = true; });
 profileOverlay.addEventListener("click", (event) => { if (event.target === profileOverlay) profileOverlay.hidden = true; });
@@ -131,7 +150,7 @@ authForm.addEventListener("submit", async (event) => {
   }
   const endpoint = authMode === "register" ? "/api/auth/register" : "/api/auth/login";
   const payload = authMode === "register"
-    ? {name: data.get("name"), email: data.get("email"), password: data.get("password")}
+    ? {name: data.get("name"), email: data.get("email"), password: data.get("password"), role: data.get("role")}
     : {email: data.get("email"), password: data.get("password")};
   authSubmit.disabled = true;
   try {
@@ -166,13 +185,22 @@ document.querySelectorAll(".category-card").forEach((card) => card.addEventListe
 
 document.querySelector("#request-form").addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (!localStorage.getItem("stroihub_token")) {
+    setAuthMode("login");
+    authMessage.textContent = "Влезте или създайте профил, за да изпратите заявка за ремонт.";
+    authMessage.classList.remove("error");
+    return;
+  }
   const form = event.currentTarget;
   const fields = form.querySelectorAll("input, textarea");
   const [name, phone, description] = [...fields].map((field) => field.value);
   try {
     const response = await fetch("/api/projects", {
       method: "POST",
-      headers: {"Content-Type": "application/json"},
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem("stroihub_token")}`
+      },
       body: JSON.stringify({name, phone, description})
     });
     const result = await response.json().catch(() => ({}));
@@ -184,7 +212,15 @@ document.querySelector("#request-form").addEventListener("submit", async (event)
   }
 });
 
-document.querySelectorAll("[data-scroll-to]").forEach((button) => button.addEventListener("click", () => document.querySelector(`#${button.dataset.scrollTo}`).scrollIntoView({behavior:"smooth"})));
+document.querySelectorAll("[data-scroll-to]").forEach((button) => button.addEventListener("click", () => {
+  if (button.dataset.scrollTo === "request" && !localStorage.getItem("stroihub_token")) {
+    setAuthMode("login");
+    authMessage.textContent = "Влезте или създайте профил, за да публикувате проект.";
+    authMessage.classList.remove("error");
+    return;
+  }
+  document.querySelector(`#${button.dataset.scrollTo}`).scrollIntoView({behavior:"smooth"});
+}));
 document.querySelectorAll("[data-toast]").forEach((button) => button.addEventListener("click", () => showToast(button.dataset.toast)));
 renderProfessionals();
 updateHeaderUser();
