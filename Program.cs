@@ -13,6 +13,7 @@ var app = builder.Build();
 var dataPath = Path.Combine(app.Environment.ContentRootPath, "data.json");
 var dataLock = new object();
 var data = LoadData(dataPath);
+var activeTokens = new HashSet<string>();
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
@@ -34,11 +35,14 @@ app.MapPost("/api/auth/register", (RegisterRequest request) =>
             Name = request.Name.Trim(),
             Email = email,
             Password = HashPassword(request.Password),
+            Role = request.Role is "professional" or "company" ? request.Role : "client",
             CreatedAt = DateTimeOffset.UtcNow
         };
         data.Users.Add(user);
         SaveData(dataPath, data);
-        return Results.Ok(new { token = CreateToken(), user = new { user.Name, user.Email } });
+        var token = CreateToken();
+        activeTokens.Add(token);
+        return Results.Ok(new { token, user = new { user.Name, user.Email } });
     }
 });
 
@@ -51,12 +55,26 @@ app.MapPost("/api/auth/login", (LoginRequest request) =>
         if (user is null || !VerifyPassword(request.Password, user.Password))
             return Results.Unauthorized();
 
-        return Results.Ok(new { token = CreateToken(), user = new { user.Name, user.Email } });
+        var token = CreateToken();
+        activeTokens.Add(token);
+        return Results.Ok(new { token, user = new { user.Name, user.Email } });
     }
 });
 
-app.MapPost("/api/projects", (ProjectRequest request) =>
+app.MapPost("/api/projects", (HttpRequest httpRequest, ProjectRequest request) =>
 {
+    var authorization = httpRequest.Headers.Authorization.ToString();
+    var token = authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+        ? authorization["Bearer ".Length..].Trim()
+        : "";
+    var authorized = false;
+    lock (dataLock)
+    {
+        authorized = token.Length > 0 && activeTokens.Contains(token);
+    }
+    if (!authorized)
+        return Results.Unauthorized();
+
     if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.Phone) || string.IsNullOrWhiteSpace(request.Description))
         return Results.BadRequest(new { message = "Попълнете име, телефон и описание на проекта." });
 
@@ -111,9 +129,9 @@ static bool VerifyPassword(string password, string stored)
 
 static string CreateToken() => Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
 
-record RegisterRequest(string Name, string Email, string Password);
+record RegisterRequest(string Name, string Email, string Password, string? Role);
 record LoginRequest(string Email, string Password);
 record ProjectRequest(string Name, string Phone, string Description);
 class AppData { public List<User> Users { get; set; } = []; public List<Project> Projects { get; set; } = []; }
-class User { public string Id { get; set; } = ""; public string Name { get; set; } = ""; public string Email { get; set; } = ""; public string Password { get; set; } = ""; public DateTimeOffset CreatedAt { get; set; } }
+class User { public string Id { get; set; } = ""; public string Name { get; set; } = ""; public string Email { get; set; } = ""; public string Password { get; set; } = ""; public string Role { get; set; } = "client"; public DateTimeOffset CreatedAt { get; set; } }
 class Project { public string Id { get; set; } = ""; public string Name { get; set; } = ""; public string Phone { get; set; } = ""; public string Description { get; set; } = ""; public DateTimeOffset CreatedAt { get; set; } }
