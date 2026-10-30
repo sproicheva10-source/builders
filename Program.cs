@@ -93,6 +93,30 @@ app.MapPost("/api/projects", (HttpRequest httpRequest, ProjectRequest request) =
     return Results.Ok(new { message = "Заявката е изпратена успешно." });
 });
 
+app.MapPost("/api/contact", (ContactRequest request) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Name) ||
+        string.IsNullOrWhiteSpace(request.Email) ||
+        !request.Email.Contains('@') ||
+        string.IsNullOrWhiteSpace(request.Message))
+        return Results.BadRequest(new { message = "Попълнете име, валиден имейл и съобщение." });
+
+    lock (dataLock)
+    {
+        data.Messages.Add(new ContactMessage
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            Name = request.Name.Trim(),
+            Email = request.Email.Trim(),
+            Topic = request.Topic.Trim(),
+            Message = request.Message.Trim(),
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        SaveData(dataPath, data);
+    }
+    return Results.Ok(new { message = "Съобщението е изпратено успешно." });
+});
+
 app.MapFallbackToFile("index.html");
 app.Run("http://localhost:8080");
 
@@ -132,6 +156,8 @@ static string CreateToken() => Convert.ToBase64String(RandomNumberGenerator.GetB
 record RegisterRequest(string Name, string Email, string Password, string? Role);
 record LoginRequest(string Email, string Password);
 record ProjectRequest(string Name, string Phone, string Description);
-class AppData { public List<User> Users { get; set; } = []; public List<Project> Projects { get; set; } = []; }
+record ContactRequest(string Name, string Email, string Topic, string Message);
+class AppData { public List<User> Users { get; set; } = []; public List<Project> Projects { get; set; } = []; public List<ContactMessage> Messages { get; set; } = []; }
 class User { public string Id { get; set; } = ""; public string Name { get; set; } = ""; public string Email { get; set; } = ""; public string Password { get; set; } = ""; public string Role { get; set; } = "client"; public DateTimeOffset CreatedAt { get; set; } }
 class Project { public string Id { get; set; } = ""; public string Name { get; set; } = ""; public string Phone { get; set; } = ""; public string Description { get; set; } = ""; public DateTimeOffset CreatedAt { get; set; } }
+class ContactMessage { public string Id { get; set; } = ""; public string Name { get; set; } = ""; public string Email { get; set; } = ""; public string Topic { get; set; } = ""; public string Message { get; set; } = ""; public DateTimeOffset CreatedAt { get; set; } }

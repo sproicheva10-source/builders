@@ -10,73 +10,101 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
   </head>
-  <body>
+  <body id="top">
     <header class="site-header">
-      <a class="brand" href="#" aria-label="StroiHub начало">
-        <span class="brand-mark" aria-hidden="true"><img src="logo.png" alt="" /></span>
+      <a class="brand" href="index.html" aria-label="Начало">
+        <span class="brand-mark" aria-hidden="true"><img src="image/stroihub-logo.jpg" alt="Лого StroiHub" /></span>
         <span>Stroi<span>Hub</span></span>
       </a>
-      <nav class="main-nav" aria-label="Основна навигация">
-        <a class="active" href="#">Начало</a>
-        <a href="#how-it-works">Как работи</a>
+      <nav class="main-nav" id="main-nav" aria-label="Основна навигация">
+        <a class="active" href="#platform">Какво е StroiHub?</a>
         <a href="#services">Услуги</a>
-        <a href="#for-professionals">За майстори</a>
+        <a href="#how-it-works">Как работи?</a>
+        <a href="#about">За нас</a>
+        <a href="#faq">ЧЗВ</a>
+        <a href="#contact">Контакти</a>
       </nav>
       <div class="header-actions">
         <button class="auth-button login-button" type="button" data-auth="login">Вход</button>
         <button class="auth-button register-button" type="button" data-auth="register">Регистрация</button>
       </div>
-      <button class="menu-button" type="button" aria-label="Отвори меню" aria-expanded="false">☰</button>
+      <button class="menu-button" type="button" aria-label="Отвори меню" aria-controls="main-nav" aria-expanded="false">☰</button>
     </header>
 
     <main>
-      <section class="hero">
+      <section class="hero" id="home">
         <div class="hero-copy">
-          <h1>Твоят ремонт.<br /><em>Твоите правила.</em></h1>
-          <p>Пълна прозрачност. Намери подходящия майстор, сравни подробни оферти и следи всеки етап от ремонта си на едно място. Без неясни цени, без изгубена информация и без излишно напрежение.</p>
-          <div class="hero-actions"><button class="button button-primary" type="button" data-scroll-to="professionals">Намери майстор <span>→</span></button><button class="button button-outline" type="button" data-scroll-to="request">Публикувай заявка <span>→</span></button></div>
-          <form class="search-panel" id="search-form">
+          <h1>Всичко за ремонта</h1>
+          <form class="search-panel hero-search-panel" id="search-form">
             <label>
-              <span>Какво искаш да ремонтираш?</span>
+              <span>Каква услуга търсиш?</span>
               <select id="service-filter">
-                <option value="all">Всички услуги</option>
-                <option value="Ремонт на баня">Ремонт на баня</option>
+                <option value="all">Избери услуга</option>
                 <option value="Боядисване">Боядисване</option>
                 <option value="Електро услуги">Електро услуги</option>
                 <option value="ВиК услуги">ВиК услуги</option>
                 <option value="Монтажи">Монтажи</option>
+                <option value="Строителство">Строителство</option>
+                <option value="Ремонти">Ремонти</option>
+                <option value="Дограма и остъкляване">Дограма и остъкляване</option>
+                <option value="Почистване">Почистване</option>
               </select>
             </label>
             <label>
-              <span>Населено място (по желание)</span>
-              <input id="location-filter" type="text" placeholder="Напр. София" />
+              <span class="location-label">Населено място</span>
+              <select id="location-filter">
+                <option value="">Избери населено място</option>
+                <option value="София">София</option>
+                <option value="Пловдив">Пловдив</option>
+                <option value="Варна">Варна</option>
+              </select>
             </label>
-            <button class="button button-primary" type="submit">Разгледай услугите <span>→</span></button>
+            <button class="button button-primary" type="submit">Търси</button>
           </form>
+          <div class="hero-actions"><button class="button button-primary" type="button" data-auth="register" data-auth-role="client">Намери майстор</button><button class="button button-outline" type="button" data-auth="register" data-auth-role="professional">Предложи услугите си</button></div>
         </div>
-        <div class="hero-art" aria-label="Илюстрация на строителен проект">
-          <div class="sun"></div>
-          <div class="building building-back"></div>
-          <div class="building building-front"><i></i><i></i><i></i><i></i></div>
-          <div class="plant plant-one">⌁</div>
-          <div class="plant plant-two">⌁</div>
-          <div class="person"><span></span></div>
+        <div class="hero-art" aria-label="Снимка на майстор">
+          <img class="hero-worker" src="image/hero-worker.jpg" alt="Майстор на обект" />
           <div class="floating-note note-top"><b>✓</b><span><strong>Проверени</strong><small>професионалисти</small></span></div>
           <div class="floating-note note-bottom"><strong>2 000+</strong><span>реализирани<br />проекта</span></div>
         </div>
       </section>
 
+      <section class="platform-section" id="platform">
+        <div class="platform-copy">
+          <h2>Какво е StroiHub?</h2>
+          <div class="platform-layout">
+            <img class="platform-image" src="image/platform-overview.jpg" alt="Илюстрация ремонтни услуги" />
+            <div class="platform-message-panel">
+              <p class="platform-lead"><strong>StroiHub е онлайн платформа, която свързва хората, търсещи строителни и ремонтни услуги, с майстори, които ги предлагат.</strong></p>
+              <p>Тя обединява разнообразни специалисти и услуги в различни направления – от ВиК и електроуслуги до боядисване, строителство и цялостни ремонти.</p>
+              <p>Тук можеш лесно да откриеш специалисти според вида на услугата и населеното място, да разгледаш техните профили и да сравниш информацията за тях.</p>
+              <p>Платформата ти позволява да се ориентираш сред различните предложения и да избереш специалист, който отговаря на нуждите на твоя проект. Независимо дали планираш малък ремонт или по-мащабна строителна дейност, StroiHub ти помага да направиш първата крачка.</p>
+              <p>Нашата цел е да направим откриването на подходящ специалист по-лесно, по-бързо и по-достъпно, като съберем различни услуги и изпълнители на едно място.</p>
+              <p class="platform-tagline"><strong>StroiHub – мястото, където проектите срещат правилните специалисти.</strong></p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section class="category-section" id="services">
         <div class="section-heading">
-          <div><h2>С какво можем да помогнем?</h2></div>
-          <a href="#professionals">Виж всички услуги <span>→</span></a>
+          <div><h2>Каква услуга търсиш?</h2><p class="section-lead">Избери категория и открий специалисти за своя ремонт или строителен проект.</p></div>
+          <div class="category-controls">
+            <span class="category-page-status" id="category-page-status" aria-live="polite">1 / 2</span>
+            <button class="category-page-button" id="category-prev" type="button" aria-label="Предишни услуги" disabled>‹</button>
+            <button class="category-page-button" id="category-next" type="button" aria-label="Следващи услуги">›</button>
+          </div>
         </div>
         <div class="category-grid">
-          <button class="category-card selected" data-category="all"><span class="category-icon">⌂</span><b>Всички услуги</b><small>124 майстори</small></button>
-          <button class="category-card" data-category="Ремонт на баня"><span class="category-icon">◈</span><b>Ремонт на баня</b><small>32 майстори</small></button>
-          <button class="category-card" data-category="Боядисване"><span class="category-icon">◒</span><b>Боядисване</b><small>28 майстори</small></button>
-          <button class="category-card" data-category="Електро услуги"><span class="category-icon">ϟ</span><b>Електро услуги</b><small>19 майстори</small></button>
-          <button class="category-card" data-category="Монтажи"><span class="category-icon">⌘</span><b>Монтажи</b><small>17 майстори</small></button>
+          <button class="category-card" data-category="ВиК услуги"><span class="category-icon" aria-hidden="true">⌁</span><b>ВиК услуги</b><small>Смяна на тръби · Монтаж на санитария · Отпушване на канали</small></button>
+          <button class="category-card" data-category="Електро услуги"><span class="category-icon" aria-hidden="true">ϟ</span><b>Електроуслуги</b><small>Ремонт на електроинсталации · Монтаж на осветление · Смяна на контакти</small></button>
+          <button class="category-card" data-category="Боядисване"><span class="category-icon" aria-hidden="true">◒</span><b>Боядисване</b><small>Боядисване на стени · Шпакловка · Декоративни мазилки</small></button>
+          <button class="category-card" data-category="Строителство"><span class="category-icon" aria-hidden="true">▦</span><b>Строителство</b><small>Зидария · Изливане на бетон · Изграждане на основи</small></button>
+          <button class="category-card" data-category="Ремонти"><span class="category-icon" aria-hidden="true">⚒</span><b>Ремонти</b><small>Лепене на плочки · Поставяне на ламинат · Монтаж на гипсокартон</small></button>
+          <button class="category-card" data-category="Монтажи"><span class="category-icon" aria-hidden="true">⌘</span><b>Монтажи</b><small>Сглобяване на мебели · Монтаж на врати · Монтаж на кухни</small></button>
+          <button class="category-card" data-category="Дограма и остъкляване"><span class="category-icon" aria-hidden="true">▣</span><b>Дограма и остъкляване</b><small>Монтаж на PVC дограма · Остъкляване на тераси · Монтаж на комарници</small></button>
+          <button class="category-card" data-category="Почистване"><span class="category-icon" aria-hidden="true">✦</span><b>Почистване</b><small>Почистване след ремонт · Основно почистване · Почистване на прозорци</small></button>
         </div>
       </section>
 
@@ -89,66 +117,98 @@
       </section>
 
       <section class="steps-section" id="how-it-works">
-        <div class="steps-intro"><h2>От идея до готов проект.</h2><p>Ние се грижим да намерите човек, на когото можете да се доверите.</p></div>
+        <div class="steps-intro"><h2>Как работи StroiHub?</h2></div>
         <div class="steps">
-          <div class="step"><span>01</span><div class="step-icon">⌕</div><h3>Опиши ремонта</h3><p>След регистрация създай заявка и добави снимки.</p></div>
-          <div class="step"><span>02</span><div class="step-icon">♧</div><h3>Получи оферти</h3><p>Подходящите майстори изпращат ясни предложения.</p></div>
-          <div class="step"><span>03</span><div class="step-icon">✓</div><h3>Избери специалист</h3><p>Сравни профили, цени и оценки на едно място.</p></div>
-          <div class="step"><span>04</span><div class="step-icon">◷</div><h3>Следи ремонта</h3><p>Дигиталният дневник събира снимки и напредък.</p></div>
-          <div class="step"><span>05</span><div class="step-icon">★</div><h3>Завърши и оцени</h3><p>Потвърди изпълнението и остави отзив.</p></div>
+          <div class="steps-progress" role="progressbar" aria-label="Напредък през стъпките" aria-valuemin="1" aria-valuemax="4" aria-valuenow="1"><span></span></div>
+          <button class="step active" type="button" data-step="1" aria-pressed="true"><span>01</span><div class="step-icon">⌕</div><h3>Избери услуга</h3><p>Посочи какво търсиш и къде.</p></button>
+          <button class="step" type="button" data-step="2" aria-pressed="false"><span>02</span><div class="step-icon">♧</div><h3>Намери специалист</h3><p>Разгледай подходящите майстори.</p></button>
+          <button class="step" type="button" data-step="3" aria-pressed="false"><span>03</span><div class="step-icon">✓</div><h3>Сравни профили</h3><p>Виж снимки, информация и оценки.</p></button>
+          <button class="step" type="button" data-step="4" aria-pressed="false"><span>04</span><div class="step-icon">◷</div><h3>Свържи се</h3><p>Избери майстор и обсъдете проекта си.</p></button>
         </div>
       </section>
 
-      <section class="benefits-section">
-        <div class="section-heading"><div><h2>Ремонтът ти, под контрол.</h2></div></div>
-        <div class="benefit-grid">
-          <article><span>✓</span><h3>Проверени майстори</h3><p>Професионалните профили преминават през проверка.</p></article>
-          <article><span>↗</span><h3>Подробни оферти</h3><p>Виж цените за труд и материали отделно.</p></article>
-          <article><span>▣</span><h3>Дигитални договори</h3><p>Приетите условия са ясни и документирани.</p></article>
-          <article><span>◷</span><h3>Дневник на ремонта</h3><p>Следи всеки етап със снимки и информация.</p></article>
+      <section class="about-section about-interactive" id="about" aria-labelledby="about-title">
+        <div class="about-interactive-heading">
+          <h2 id="about-title">За нас</h2>
+        </div>
+        <div class="about-tabs" role="tablist" aria-label="Научи повече за StroiHub">
+          <button class="about-tab active" id="about-tab-story" type="button" role="tab" aria-selected="true" aria-controls="about-panel-story" data-about-tab="story">Нашата идея</button>
+          <button class="about-tab" id="about-tab-founders" type="button" role="tab" aria-selected="false" aria-controls="about-panel-founders" data-about-tab="founders" tabindex="-1">Създателите</button>
+        </div>
+        <div class="about-panel" id="about-panel-story" role="tabpanel" aria-labelledby="about-tab-story">
+          <div class="about-story-copy">
+            <span class="about-panel-icon" aria-hidden="true">⌕</span>
+            <h3>Една платформа, която свързва нуждата с правилния специалист</h3>
+            <p>Когато започваш ремонт, често трябва да търсиш специалисти на много различни места. StroiHub събира услуги и профили, за да можеш по-лесно да откриеш подходящ майстор, да разгледаш информацията и да направиш следващата крачка.</p>
+            <div class="about-highlights"><span>Услуги на едно място</span><span>Търсене по категория</span><span>По-ясен избор</span></div>
+          </div>
+          <img class="about-panel-image" src="image/authors-at-work.jpg" alt="Екип планира ремонт" />
+        </div>
+        <div class="about-panel about-founders-panel" id="about-panel-founders" role="tabpanel" aria-labelledby="about-tab-founders" hidden>
+          <article class="about-founder-card">
+            <div class="author-photo-placeholder" role="img" aria-label="Място за снимка на първия автор"><span aria-hidden="true">▧</span><small>Място за снимка</small></div>
+          </article>
+          <article class="about-founder-card">
+            <div class="author-photo-placeholder" role="img" aria-label="Място за снимка на втория автор"><span aria-hidden="true">▧</span><small>Място за снимка</small></div>
+          </article>
         </div>
       </section>
 
-      <section class="pro-cta" id="for-professionals">
-        <div><h2>Развивай бизнеса си с StroiHub.</h2><p>Покажи опита си и получавай заявки от клиенти, които търсят твоите услуги.</p></div>
-        <button class="button button-dark" type="button" data-auth="register">Регистрирай се като майстор <span>→</span></button>
-      </section>
-
-      <section class="faq-section" id="faq">
-        <div class="faq-heading"><span class="faq-accent"></span><h2>Често задавани въпроси.</h2></div>
-        <div class="faq-layout">
-          <div class="faq-visual" aria-label="Илюстрация на дом в ремонт"><div class="faq-sun"></div><div class="faq-house"><span></span><i></i><b></b></div><div class="faq-tool">⌁</div><div class="faq-badge">StroiHub</div></div>
-          <div class="faq-list">
-          <details><summary><span class="faq-question"><span class="faq-icon">✓</span><span>Безплатна ли е регистрацията?</span></span></summary><p>Да. Създаването на клиентски профил и разглеждането на публичната информация са безплатни.</p></details>
-          <details><summary><span class="faq-question"><span class="faq-icon">★</span><span>Как се проверяват майсторите?</span></span></summary><p>Професионалистите добавят професионална информация, опит и завършени проекти. Проверката се извършва преди активиране на професионалния профил.</p></details>
-          <details><summary><span class="faq-question"><span class="faq-icon">↗</span><span>Как получавам оферти?</span></span></summary><p>След регистрация описвате ремонта си. Подходящите майстори могат да изпратят подробни предложения за труд и материали.</p></details>
-          <details><summary><span class="faq-question"><span class="faq-icon">▣</span><span>Как се формира цената?</span></span></summary><p>Офертите могат да показват отделно цена за труд и материали, за да сравните условията по-прозрачно.</p></details>
-          <details><summary><span class="faq-question"><span class="faq-icon">◷</span><span>Как следя напредъка на ремонта?</span></span></summary><p>След приемане на оферта информацията, снимките и етапите могат да се поддържат в дигитален дневник.</p></details>
-          <details><summary><span class="faq-question"><span class="faq-icon">?</span><span>Кога е необходим вход?</span></span></summary><p>Вход е необходим за публикуване на заявка, изпращане на оферта, контакт чрез защитената система и управление на лични ремонти.</p></details>
+      <section class="about-followup" aria-labelledby="about-followup-title">
+        <div class="about-followup-heading">
+          <h2 id="about-followup-title">За нас 2</h2>
+        </div>
+        <div class="about-followup-bubble">
+          <span class="about-followup-icon" aria-hidden="true">✦</span>
+          <div>
+            <span class="about-followup-kicker">Авторите и тяхната мисия</span>
+            <h3>Идея, създадена с мисъл за по-лесни ремонти</h3>
+            <p>Авторите на StroiHub обединиха усилия около една обща цел: да направят търсенето на строителни и ремонтни услуги по-достъпно и подредено. Вярваме, че всеки трябва по-лесно да открива подходящи специалисти, да се ориентира в избора и уверено да започва своя проект.</p>
+            <p class="about-followup-mission">Нашата мисия е да свързваме хората и специалистите и да превръщаме пътя от идеята до ремонта в по-ясно преживяване.</p>
           </div>
         </div>
       </section>
 
-      <section class="request-section" id="request">
-        <div><h2>Разкажете ни за вашия проект.</h2><p>Влезте или създайте профил, за да изпратите заявка.</p></div>
-        <form class="request-form" id="request-form">
-          <input required type="text" placeholder="Вашето име" aria-label="Вашето име" />
-          <input required type="tel" placeholder="Телефон за контакт" aria-label="Телефон за контакт" />
-          <textarea required placeholder="Какво трябва да бъде направено?" aria-label="Описание на проекта"></textarea>
-          <button class="button button-light" type="submit">Изпрати заявка <span>→</span></button>
+      <section class="faq-section" id="faq">
+        <div class="faq-heading"><span class="faq-accent"></span><h2>Често задавани въпроси</h2></div>
+        <div class="faq-layout">
+          <div class="faq-list">
+          <details><summary><span class="faq-question"><span class="faq-icon" aria-hidden="true">?</span><span>Въпрос 1</span></span></summary><p>Отговор 1</p></details>
+          <details><summary><span class="faq-question"><span class="faq-icon" aria-hidden="true">✓</span><span>Въпрос 2</span></span></summary><p>Отговор 2</p></details>
+          <details><summary><span class="faq-question"><span class="faq-icon" aria-hidden="true">↗</span><span>Въпрос 3</span></span></summary><p>Отговор 3</p></details>
+          <details><summary><span class="faq-question"><span class="faq-icon" aria-hidden="true">лв</span><span>Въпрос 4</span></span></summary><p>Отговор 4</p></details>
+          <details><summary><span class="faq-question"><span class="faq-icon" aria-hidden="true">◷</span><span>Въпрос 5</span></span></summary><p>Отговор 5</p></details>
+          </div>
+        </div>
+      </section>
+
+      <section class="contact-section" id="contact">
+        <div class="contact-info">
+          <div class="contact-copy"><h2>Свържи се с нас</h2><p>Имаш въпрос или предложение? Изпрати ни съобщение и ще се свържем с теб.</p></div>
+          <img class="contact-visual-image" src="image/contact-illustration.png" alt="Каска и къща" />
+        </div>
+        <form class="contact-form" id="contact-form">
+          <div class="contact-form-heading"><h3>Напиши ни съобщение</h3><p>Попълни формата и ще се свържем с теб.</p></div>
+          <label class="contact-field"><span>Име</span><input required type="text" name="name" autocomplete="name" placeholder="Име и фамилия" /></label>
+          <label class="contact-field"><span>Имейл</span><input required type="email" name="email" autocomplete="email" placeholder="name@example.com" /></label>
+          <label class="contact-field contact-field-full"><span>Тема</span><select name="topic" id="contact-topic"><option value="Общ въпрос">Общ въпрос</option><option value="Регистрация">Регистрация</option><option value="Профили">Профили</option><option value="Предложение">Предложение</option><option value="Технически проблем">Технически проблем</option><option value="Друго">Друго</option></select></label>
+          <label class="contact-field contact-field-full" id="contact-custom-topic-field" hidden><span>Напиши своя тема</span><input type="text" name="topicOther" id="contact-custom-topic" placeholder="Въведи тема" disabled /></label>
+          <label class="contact-field contact-field-full"><span>Съобщение</span><textarea required name="message" placeholder="С какво можем да помогнем?"></textarea></label>
+          <button class="button button-primary" type="submit">Изпрати съобщението <span aria-hidden="true">→</span></button>
+          <p class="form-status" id="contact-status" role="status"></p>
         </form>
       </section>
     </main>
     <footer class="site-footer">
-      <div class="footer-brand"><a class="brand" href="#"><span class="brand-mark" aria-hidden="true"><img src="logo.png" alt="" /></span><span>Stroi<span>Hub</span></span></a><p>По-уверен ремонт, от първата идея до последния детайл.</p></div>
-      <div><strong>StroiHub</strong><a href="#how-it-works">Как работи</a><a href="#request">Контакти</a></div>
+      <div class="footer-brand"><a class="brand" href="#"><span class="brand-mark" aria-hidden="true"><img src="image/stroihub-logo.jpg" alt="Лого StroiHub" /></span><span>Stroi<span>Hub</span></span></a><p>По-уверен ремонт, от първата идея до последния детайл.</p></div>
+      <div><strong>StroiHub</strong><a href="#platform">Какво е StroiHub?</a><a href="#how-it-works">Как работи</a><a href="#about">За нас</a></div>
       <div><strong>Услуги</strong><a href="#services">Категории</a><a href="#professionals">Майстори</a></div>
-      <div><strong>Помощ</strong><a href="#" data-toast="Често задаваните въпроси ще бъдат публикувани скоро.">Често задавани въпроси</a><a href="#" data-toast="Общите условия ще бъдат публикувани скоро.">Общи условия</a><a href="#" data-toast="Политиката за поверителност ще бъде публикувана скоро.">Поверителност</a></div>
+      <div><strong>Помощ</strong><a href="#faq">Често задавани въпроси</a><a href="#contact">Контакти</a><a href="#" data-toast="Общите условия ще бъдат публикувани скоро.">Общи условия</a><a href="#" data-toast="Политиката за поверителност ще бъде публикувана скоро.">Поверителност</a></div>
     </footer>
     <div class="auth-overlay" id="auth-overlay" hidden>
       <section class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">
         <button class="auth-close" type="button" aria-label="Затвори" data-auth-close>×</button>
-        <div class="auth-brand"><span class="brand-mark" aria-hidden="true"><img src="logo.png" alt="" /></span><span>Stroi<span>Hub</span></span></div>
+        <div class="auth-brand"><span class="brand-mark" aria-hidden="true"><img src="image/stroihub-logo.jpg" alt="Лого StroiHub" /></span><span>Stroi<span>Hub</span></span></div>
         <h2 id="auth-title">Влезте във вашия профил</h2>
         <p class="auth-subtitle" id="auth-subtitle">Управлявайте проектите си и общувайте с майстори.</p>
         <div class="auth-tabs" role="tablist">
@@ -157,7 +217,7 @@
         </div>
         <form class="auth-form" id="auth-form">
           <label class="register-only" hidden>Име и фамилия<input required type="text" name="name" autocomplete="name" placeholder="Напр. Иван Петров" /></label>
-          <fieldset class="register-only role-choice" hidden><legend>Как ще използвате StroiHub?</legend><label><input type="radio" name="role" value="client" checked /> Търся майстор</label><label><input type="radio" name="role" value="professional" /> Предлагам услуги</label><label><input type="radio" name="role" value="company" /> Имам строителна фирма</label></fieldset>
+          <fieldset class="register-only role-choice" hidden><legend>Как ще използвате StroiHub?</legend><label><input type="radio" name="role" value="client" checked /> Търся майстор</label><label><input type="radio" name="role" value="professional" /> Предлагам услуги</label></fieldset>
           <label>Имейл адрес<input required type="email" name="email" autocomplete="email" placeholder="you@example.com" /></label>
           <label>Парола<div class="password-field"><input required type="password" name="password" minlength="6" autocomplete="current-password" placeholder="Минимум 6 символа" /><button type="button" data-toggle-password aria-label="Покажи паролата">Покажи</button></div></label>
           <label class="register-only" hidden>Повторете паролата<input required type="password" name="confirmPassword" minlength="6" autocomplete="new-password" placeholder="Въведете паролата отново" /></label>
@@ -179,7 +239,7 @@
         <div class="profile-stats"><span><strong id="profile-rating"></strong><small>рейтинг</small></span><span><strong id="profile-reviews"></strong><small>оценки</small></span><span><strong>8 г.</strong><small>опит</small></span></div>
         <p class="profile-description" id="profile-description"></p>
         <div class="profile-tags"><span>Отговаря до 1 час</span><span>Работи с договор</span><span>Безплатна консултация</span></div>
-        <button class="button button-primary profile-contact" type="button" data-scroll-to="request">Изпрати запитване <span>→</span></button>
+        <button class="button button-primary profile-contact" type="button" data-scroll-to="contact">Свържи се с нас</button>
       </section>
     </div>
     <div class="toast" id="toast" role="status"></div>
