@@ -13,7 +13,7 @@
   <body id="top">
     <header class="site-header">
       <a class="brand" href="index.html" aria-label="Начало">
-        <span class="brand-mark" aria-hidden="true"><img src="image/stroihub-logo.jpg" alt="Лого StroiHub" /></span>
+        <span class="brand-mark" aria-hidden="true"><img src="stroihub-logo.svg" alt="" /></span>
         <span>Stroi<span>Hub</span></span>
       </a>
       <nav class="main-nav" id="main-nav" aria-label="Основна навигация">
@@ -36,9 +36,14 @@
         <div class="hero-copy">
           <h1>Всичко за ремонта</h1>
           <form class="search-panel hero-search-panel" id="search-form">
-            <label>
-              <span>Каква услуга търсиш?</span>
-              <select id="service-filter">
+            <div class="service-picker-field" id="service-picker">
+              <span class="service-picker-label" id="service-picker-label"><span class="picker-label-icon" aria-hidden="true">✦</span><span>Каква услуга търсиш?</span></span>
+              <button class="service-picker-trigger" id="service-picker-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="service-picker-options" aria-labelledby="service-picker-label service-picker-value">
+                <span class="service-picker-icon" aria-hidden="true">✨</span>
+                <span class="service-picker-copy"><strong id="service-picker-value">Избери услуга</strong><small>Разгледай категориите</small></span>
+                <span class="service-picker-chevron" aria-hidden="true"></span>
+              </button>
+              <select id="service-filter" hidden>
                 <option value="all">Избери услуга</option>
                 <option value="Боядисване">Боядисване</option>
                 <option value="Електро услуги">Електро услуги</option>
@@ -49,16 +54,284 @@
                 <option value="Дограма и остъкляване">Дограма и остъкляване</option>
                 <option value="Почистване">Почистване</option>
               </select>
-            </label>
-            <label>
-              <span class="location-label">Населено място</span>
-              <select id="location-filter">
-                <option value="">Избери населено място</option>
-                <option value="София">София</option>
-                <option value="Пловдив">Пловдив</option>
+              <div class="service-picker-options" id="service-picker-options" role="listbox" aria-labelledby="service-picker-label" hidden></div>
+            </div>
+            <div class="location-picker-field" id="location-picker">
+              <span class="location-picker-label" id="location-picker-label"><span class="picker-label-icon" aria-hidden="true">⌖</span><span>Населено място</span></span>
+              <button class="location-picker-trigger" id="location-picker-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="location-picker-options" aria-labelledby="location-picker-label location-picker-value">
+                <span class="location-picker-copy"><strong id="location-picker-value">Всички населени места</strong><small>Покажи всички специалисти</small></span>
+                <span class="location-picker-chevron" aria-hidden="true"></span>
+              </button>
+              <select id="location-filter" hidden>
+                <option value="">Всички населени места</option>
+                <option value="Айтос">Айтос</option>
+                <option value="Аксаково">Аксаково</option>
+                <option value="Алфатар">Алфатар</option>
+                <option value="Антоново">Антоново</option>
+                <option value="Априлци">Априлци</option>
+                <option value="Ардино">Ардино</option>
+                <option value="Асеновград">Асеновград</option>
+                <option value="Ахелой">Ахелой</option>
+                <option value="Ахтопол">Ахтопол</option>
+                <option value="Балчик">Балчик</option>
+                <option value="Банкя">Банкя</option>
+                <option value="Банско">Банско</option>
+                <option value="Баня">Баня</option>
+                <option value="Батак">Батак</option>
+                <option value="Батановци">Батановци</option>
+                <option value="Белене">Белене</option>
+                <option value="Белица">Белица</option>
+                <option value="Белово">Белово</option>
+                <option value="Белоградчик">Белоградчик</option>
+                <option value="Белослав">Белослав</option>
+                <option value="Берковица">Берковица</option>
+                <option value="Благоевград">Благоевград</option>
+                <option value="Бобов дол">Бобов дол</option>
+                <option value="Бобошево">Бобошево</option>
+                <option value="Божурище">Божурище</option>
+                <option value="Бойчиновци">Бойчиновци</option>
+                <option value="Болярово">Болярово</option>
+                <option value="Борово">Борово</option>
+                <option value="Ботевград">Ботевград</option>
+                <option value="Брацигово">Брацигово</option>
+                <option value="Брегово">Брегово</option>
+                <option value="Брезник">Брезник</option>
+                <option value="Брезово">Брезово</option>
+                <option value="Брусарци">Брусарци</option>
+                <option value="Бургас">Бургас</option>
+                <option value="Бухово">Бухово</option>
+                <option value="Българово">Българово</option>
+                <option value="Бяла|Варна" data-city-name="Бяла">Бяла (обл. Варна)</option>
+                <option value="Бяла|Русе" data-city-name="Бяла">Бяла (обл. Русе)</option>
+                <option value="Бяла Слатина">Бяла Слатина</option>
+                <option value="Бяла черква">Бяла черква</option>
                 <option value="Варна">Варна</option>
+                <option value="Велики Преслав">Велики Преслав</option>
+                <option value="Велико Търново">Велико Търново</option>
+                <option value="Велинград">Велинград</option>
+                <option value="Ветово">Ветово</option>
+                <option value="Ветрен">Ветрен</option>
+                <option value="Видин">Видин</option>
+                <option value="Враца">Враца</option>
+                <option value="Вълчедръм">Вълчедръм</option>
+                <option value="Вълчи дол">Вълчи дол</option>
+                <option value="Върбица">Върбица</option>
+                <option value="Вършец">Вършец</option>
+                <option value="Габрово">Габрово</option>
+                <option value="Генерал Тошево">Генерал Тошево</option>
+                <option value="Главиница">Главиница</option>
+                <option value="Глоджево">Глоджево</option>
+                <option value="Годеч">Годеч</option>
+                <option value="Горна Оряховица">Горна Оряховица</option>
+                <option value="Гоце Делчев">Гоце Делчев</option>
+                <option value="Грамада">Грамада</option>
+                <option value="Гулянци">Гулянци</option>
+                <option value="Гурково">Гурково</option>
+                <option value="Гълъбово">Гълъбово</option>
+                <option value="Две могили">Две могили</option>
+                <option value="Дебелец">Дебелец</option>
+                <option value="Девин">Девин</option>
+                <option value="Девня">Девня</option>
+                <option value="Джебел">Джебел</option>
+                <option value="Димитровград">Димитровград</option>
+                <option value="Димово">Димово</option>
+                <option value="Добринище">Добринище</option>
+                <option value="Добрич">Добрич</option>
+                <option value="Долна баня">Долна баня</option>
+                <option value="Долна Митрополия">Долна Митрополия</option>
+                <option value="Долна Оряховица">Долна Оряховица</option>
+                <option value="Долни Дъбник">Долни Дъбник</option>
+                <option value="Долни чифлик">Долни чифлик</option>
+                <option value="Доспат">Доспат</option>
+                <option value="Драгоман">Драгоман</option>
+                <option value="Дряново">Дряново</option>
+                <option value="Дулово">Дулово</option>
+                <option value="Дунавци">Дунавци</option>
+                <option value="Дупница">Дупница</option>
+                <option value="Дългопол">Дългопол</option>
+                <option value="Елена">Елена</option>
+                <option value="Елин Пелин">Елин Пелин</option>
+                <option value="Елхово">Елхово</option>
+                <option value="Етрополе">Етрополе</option>
+                <option value="Завет">Завет</option>
+                <option value="Земен">Земен</option>
+                <option value="Златарица">Златарица</option>
+                <option value="Златица">Златица</option>
+                <option value="Златоград">Златоград</option>
+                <option value="Ивайловград">Ивайловград</option>
+                <option value="Игнатиево">Игнатиево</option>
+                <option value="Искър">Искър</option>
+                <option value="Исперих">Исперих</option>
+                <option value="Ихтиман">Ихтиман</option>
+                <option value="Каблешково">Каблешково</option>
+                <option value="Каварна">Каварна</option>
+                <option value="Казанлък">Казанлък</option>
+                <option value="Калофер">Калофер</option>
+                <option value="Камено">Камено</option>
+                <option value="Каолиново">Каолиново</option>
+                <option value="Карлово">Карлово</option>
+                <option value="Карнобат">Карнобат</option>
+                <option value="Каспичан">Каспичан</option>
+                <option value="Кермен">Кермен</option>
+                <option value="Килифарево">Килифарево</option>
+                <option value="Китен">Китен</option>
+                <option value="Клисура">Клисура</option>
+                <option value="Кнежа">Кнежа</option>
+                <option value="Козлодуй">Козлодуй</option>
+                <option value="Койнаре">Койнаре</option>
+                <option value="Копривщица">Копривщица</option>
+                <option value="Костандово">Костандово</option>
+                <option value="Костенец">Костенец</option>
+                <option value="Костинброд">Костинброд</option>
+                <option value="Котел">Котел</option>
+                <option value="Кочериново">Кочериново</option>
+                <option value="Кресна">Кресна</option>
+                <option value="Криводол">Криводол</option>
+                <option value="Кричим">Кричим</option>
+                <option value="Крумовград">Крумовград</option>
+                <option value="Крън">Крън</option>
+                <option value="Кубрат">Кубрат</option>
+                <option value="Куклен">Куклен</option>
+                <option value="Кула">Кула</option>
+                <option value="Кърджали">Кърджали</option>
+                <option value="Кюстендил">Кюстендил</option>
+                <option value="Левски">Левски</option>
+                <option value="Летница">Летница</option>
+                <option value="Ловеч">Ловеч</option>
+                <option value="Лозница">Лозница</option>
+                <option value="Лом">Лом</option>
+                <option value="Луковит">Луковит</option>
+                <option value="Лъки">Лъки</option>
+                <option value="Любимец">Любимец</option>
+                <option value="Лясковец">Лясковец</option>
+                <option value="Мадан">Мадан</option>
+                <option value="Маджарово">Маджарово</option>
+                <option value="Малко Търново">Малко Търново</option>
+                <option value="Мартен">Мартен</option>
+                <option value="Мездра">Мездра</option>
+                <option value="Мелник">Мелник</option>
+                <option value="Меричлери">Меричлери</option>
+                <option value="Мизия">Мизия</option>
+                <option value="Момин проход">Момин проход</option>
+                <option value="Момчилград">Момчилград</option>
+                <option value="Монтана">Монтана</option>
+                <option value="Мъглиж">Мъглиж</option>
+                <option value="Неделино">Неделино</option>
+                <option value="Несебър">Несебър</option>
+                <option value="Николаево">Николаево</option>
+                <option value="Никопол">Никопол</option>
+                <option value="Нова Загора">Нова Загора</option>
+                <option value="Нови Искър">Нови Искър</option>
+                <option value="Нови пазар">Нови пазар</option>
+                <option value="Обзор">Обзор</option>
+                <option value="Омуртаг">Омуртаг</option>
+                <option value="Опака">Опака</option>
+                <option value="Оряхово">Оряхово</option>
+                <option value="Павел баня">Павел баня</option>
+                <option value="Павликени">Павликени</option>
+                <option value="Пазарджик">Пазарджик</option>
+                <option value="Панагюрище">Панагюрище</option>
+                <option value="Перник">Перник</option>
+                <option value="Перущица">Перущица</option>
+                <option value="Петрич">Петрич</option>
+                <option value="Пещера">Пещера</option>
+                <option value="Пирдоп">Пирдоп</option>
+                <option value="Плачковци">Плачковци</option>
+                <option value="Плевен">Плевен</option>
+                <option value="Плиска">Плиска</option>
+                <option value="Пловдив">Пловдив</option>
+                <option value="Полски Тръмбеш">Полски Тръмбеш</option>
+                <option value="Поморие">Поморие</option>
+                <option value="Попово">Попово</option>
+                <option value="Пордим">Пордим</option>
+                <option value="Правец">Правец</option>
+                <option value="Приморско">Приморско</option>
+                <option value="Провадия">Провадия</option>
+                <option value="Първомай">Първомай</option>
+                <option value="Раднево">Раднево</option>
+                <option value="Радомир">Радомир</option>
+                <option value="Разград">Разград</option>
+                <option value="Разлог">Разлог</option>
+                <option value="Ракитово">Ракитово</option>
+                <option value="Раковски">Раковски</option>
+                <option value="Рила">Рила</option>
+                <option value="Роман">Роман</option>
+                <option value="Рудозем">Рудозем</option>
+                <option value="Русе">Русе</option>
+                <option value="Садово">Садово</option>
+                <option value="Самоков">Самоков</option>
+                <option value="Сандански">Сандански</option>
+                <option value="Сапарева баня">Сапарева баня</option>
+                <option value="Свети Влас">Свети Влас</option>
+                <option value="Свиленград">Свиленград</option>
+                <option value="Свищов">Свищов</option>
+                <option value="Своге">Своге</option>
+                <option value="Севлиево">Севлиево</option>
+                <option value="Сеново">Сеново</option>
+                <option value="Септември">Септември</option>
+                <option value="Силистра">Силистра</option>
+                <option value="Симеоновград">Симеоновград</option>
+                <option value="Симитли">Симитли</option>
+                <option value="Славяново">Славяново</option>
+                <option value="Сливен">Сливен</option>
+                <option value="Сливница">Сливница</option>
+                <option value="Сливо поле">Сливо поле</option>
+                <option value="Смолян">Смолян</option>
+                <option value="Смядово">Смядово</option>
+                <option value="Созопол">Созопол</option>
+                <option value="Сопот">Сопот</option>
+                <option value="София">София</option>
+                <option value="Средец">Средец</option>
+                <option value="Стамболийски">Стамболийски</option>
+                <option value="Стара Загора">Стара Загора</option>
+                <option value="Стражица">Стражица</option>
+                <option value="Стралджа">Стралджа</option>
+                <option value="Стрелча">Стрелча</option>
+                <option value="Суворово">Суворово</option>
+                <option value="Сунгурларе">Сунгурларе</option>
+                <option value="Сухиндол">Сухиндол</option>
+                <option value="Съединение">Съединение</option>
+                <option value="Сърница">Сърница</option>
+                <option value="Твърдица">Твърдица</option>
+                <option value="Тервел">Тервел</option>
+                <option value="Тетевен">Тетевен</option>
+                <option value="Тополовград">Тополовград</option>
+                <option value="Троян">Троян</option>
+                <option value="Трън">Трън</option>
+                <option value="Тръстеник">Тръстеник</option>
+                <option value="Трявна">Трявна</option>
+                <option value="Тутракан">Тутракан</option>
+                <option value="Търговище">Търговище</option>
+                <option value="Угърчин">Угърчин</option>
+                <option value="Хаджидимово">Хаджидимово</option>
+                <option value="Харманли">Харманли</option>
+                <option value="Хасково">Хасково</option>
+                <option value="Хисаря">Хисаря</option>
+                <option value="Цар Калоян">Цар Калоян</option>
+                <option value="Царево">Царево</option>
+                <option value="Чепеларе">Чепеларе</option>
+                <option value="Червен бряг">Червен бряг</option>
+                <option value="Черноморец">Черноморец</option>
+                <option value="Чипровци">Чипровци</option>
+                <option value="Чирпан">Чирпан</option>
+                <option value="Шабла">Шабла</option>
+                <option value="Шивачево">Шивачево</option>
+                <option value="Шипка">Шипка</option>
+                <option value="Шумен">Шумен</option>
+                <option value="Ябланица">Ябланица</option>
+                <option value="Якоруда">Якоруда</option>
+                <option value="Ямбол">Ямбол</option>
               </select>
-            </label>
+              <div class="location-picker-options" id="location-picker-options" hidden>
+                <label class="location-picker-search">
+                  <span class="location-search-icon" aria-hidden="true"></span>
+                  <input id="location-picker-search" type="search" autocomplete="off" placeholder="Търси град..." aria-label="Търси град" aria-controls="location-picker-results" />
+                  <kbd>⌕</kbd>
+                </label>
+                <div class="location-picker-results" id="location-picker-results" role="listbox" aria-labelledby="location-picker-label"></div>
+                <p class="location-picker-empty" id="location-picker-empty" role="status" hidden>Няма намерени градове. Опитай с друго име.</p>
+              </div>
+            </div>
             <button class="button button-primary" type="submit">Търси</button>
           </form>
           <div class="hero-actions"><button class="button button-primary" type="button" data-auth="register" data-auth-role="client">Намери майстор</button><button class="button button-outline" type="button" data-auth="register" data-auth-role="professional">Предложи услугите си</button></div>
@@ -90,11 +363,6 @@
       <section class="category-section" id="services">
         <div class="section-heading">
           <div><h2>Каква услуга търсиш?</h2><p class="section-lead">Избери категория и открий специалисти за своя ремонт или строителен проект.</p></div>
-          <div class="category-controls">
-            <span class="category-page-status" id="category-page-status" aria-live="polite">1 / 2</span>
-            <button class="category-page-button" id="category-prev" type="button" aria-label="Предишни услуги" disabled>‹</button>
-            <button class="category-page-button" id="category-next" type="button" aria-label="Следващи услуги">›</button>
-          </div>
         </div>
         <div class="category-grid">
           <button class="category-card" data-category="ВиК услуги"><span class="category-icon" aria-hidden="true">⌁</span><b>ВиК услуги</b><small>Смяна на тръби · Монтаж на санитария · Отпушване на канали</small></button>
@@ -200,7 +468,7 @@
       </section>
     </main>
     <footer class="site-footer">
-      <div class="footer-brand"><a class="brand" href="#"><span class="brand-mark" aria-hidden="true"><img src="image/stroihub-logo.jpg" alt="Лого StroiHub" /></span><span>Stroi<span>Hub</span></span></a><p>По-уверен ремонт, от първата идея до последния детайл.</p></div>
+      <div class="footer-brand"><a class="brand" href="#"><span class="brand-mark" aria-hidden="true"><img src="stroihub-logo.svg" alt="" /></span><span>Stroi<span>Hub</span></span></a><p>По-уверен ремонт, от първата идея до последния детайл.</p></div>
       <div><strong>StroiHub</strong><a href="#platform">Какво е StroiHub?</a><a href="#how-it-works">Как работи</a><a href="#about">За нас</a></div>
       <div><strong>Услуги</strong><a href="#services">Категории</a><a href="#professionals">Майстори</a></div>
       <div><strong>Помощ</strong><a href="#faq">Често задавани въпроси</a><a href="#contact">Контакти</a><a href="#" data-toast="Общите условия ще бъдат публикувани скоро.">Общи условия</a><a href="#" data-toast="Политиката за поверителност ще бъде публикувана скоро.">Поверителност</a></div>
@@ -208,9 +476,9 @@
     <div class="auth-overlay" id="auth-overlay" hidden>
       <section class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">
         <button class="auth-close" type="button" aria-label="Затвори" data-auth-close>×</button>
-        <div class="auth-brand"><span class="brand-mark" aria-hidden="true"><img src="image/stroihub-logo.jpg" alt="Лого StroiHub" /></span><span>Stroi<span>Hub</span></span></div>
+        <div class="auth-brand"><span class="brand-mark" aria-hidden="true"><img src="stroihub-logo.svg" alt="" /></span><span>Stroi<span>Hub</span></span></div>
         <h2 id="auth-title">Влезте във вашия профил</h2>
-        <p class="auth-subtitle" id="auth-subtitle">Управлявайте проектите си и общувайте с майстори.</p>
+        <p class="auth-subtitle" id="auth-subtitle">Влезте, за да разглеждате профилите на специалистите.</p>
         <div class="auth-tabs" role="tablist">
           <button class="auth-tab active" type="button" data-auth-mode="login" role="tab">Вход</button>
           <button class="auth-tab" type="button" data-auth-mode="register" role="tab">Регистрация</button>
@@ -227,6 +495,88 @@
           <p class="auth-message" id="auth-message" role="status"></p>
         </form>
         <p class="auth-switch" id="auth-switch">Нямате профил? <button type="button" data-auth-mode="register">Създайте го безплатно</button></p>
+      </section>
+    </div>
+    <div class="account-overlay" id="account-overlay" hidden>
+      <section class="account-modal" role="dialog" aria-modal="true" aria-labelledby="account-title">
+        <button class="auth-close account-close" type="button" aria-label="Затвори профила" data-account-close>×</button>
+        <div class="account-heading">
+          <span class="account-kicker"><span aria-hidden="true">✦</span> ТВОЯТ ПРОФИЛ В STROIHUB</span>
+          <h2 id="account-title">Добре дошъл!</h2>
+          <p>Всичко важно за твоя акаунт и следващата стъпка по проекта ти.</p>
+        </div>
+        <section class="account-identity" aria-label="Информация за профила">
+          <div class="account-avatar" id="account-avatar" aria-hidden="true"></div>
+          <div class="account-identity-copy">
+            <strong id="account-name"></strong>
+            <span id="account-email"></span>
+          </div>
+          <span class="account-role-badge" id="account-role"></span>
+        </section>
+        <div class="account-layout">
+          <nav class="account-nav" aria-label="Настройки на профила">
+            <button class="account-nav-item active" type="button" data-account-view="profile" aria-current="page"><span aria-hidden="true">◉</span> Профил</button>
+            <button class="account-nav-item" type="button" data-account-view="settings"><span aria-hidden="true">⚙</span> Настройки</button>
+            <button class="account-nav-item" type="button" data-account-view="privacy"><span aria-hidden="true">◇</span> Поверителност</button>
+            <button class="account-nav-item" type="button" data-account-view="requests" id="account-work-nav"><span aria-hidden="true">▤</span><span id="account-work-label">Заявки</span></button>
+            <button class="account-nav-item account-switch-button" type="button" data-account-switch><span aria-hidden="true">⇄</span> Смени профила</button>
+            <button class="account-nav-item account-logout-nav" type="button" data-account-logout><span aria-hidden="true">↪</span> Изход от профила</button>
+            <button class="account-nav-item account-delete-nav" type="button" data-account-view="privacy" data-account-open-view="privacy"><span aria-hidden="true">⌫</span> Изтрий профила</button>
+          </nav>
+          <div class="account-content">
+            <section class="account-view" data-account-panel="profile">
+              <div class="account-section-heading"><div><h3>Профил</h3><p>Основна информация за твоя акаунт.</p></div></div>
+              <dl class="account-profile-details">
+                <div><dt>Име</dt><dd id="account-profile-name"></dd></div>
+                <div><dt>Имейл адрес</dt><dd id="account-profile-email"></dd></div>
+                <div><dt>Тип профил</dt><dd id="account-profile-role"></dd></div>
+              </dl>
+              <button class="account-primary-action" type="button" data-account-open-view="settings">Редактирай профила <span aria-hidden="true">→</span></button>
+            </section>
+            <section class="account-view" data-account-panel="settings" hidden>
+              <div class="account-section-heading"><div><h3>Настройки</h3><p>Промени името и имейла, свързани с профила.</p></div></div>
+              <form class="account-settings-form" id="account-settings-form">
+                <label>Име и фамилия<input required type="text" name="name" autocomplete="name" minlength="2" maxlength="100" /></label>
+                <label>Имейл адрес<input required type="email" name="email" autocomplete="email" maxlength="254" /></label>
+                <button class="account-primary-action" type="submit">Запази промените <span aria-hidden="true">→</span></button>
+                <p class="account-form-status" id="account-settings-status" role="status"></p>
+              </form>
+            </section>
+            <section class="account-view" data-account-panel="privacy" hidden>
+              <div class="account-section-heading"><div><h3>Поверителност</h3><p>Информация за данните и достъпа до профила.</p></div></div>
+              <div class="account-privacy-note"><span aria-hidden="true">◇</span><p>Данните в профила се използват за вход и за показване на твоите заявки или обяви. Не споделяй паролата си с други хора.</p></div>
+              <div class="account-danger-zone">
+                <div><strong>Изтриване на профила</strong><p>Профилът и свързаните с него заявки и обяви ще бъдат изтрити окончателно.</p></div>
+                <button class="account-delete-button" type="button" data-account-delete>Изтрий профила</button>
+              </div>
+              <p class="account-form-status" id="account-privacy-status" role="status"></p>
+            </section>
+            <section class="account-view" data-account-panel="requests" hidden>
+              <div class="account-section-heading"><div><h3 id="account-work-title">Моите заявки</h3><p id="account-work-description">Заявки, изпратени от твоя профил.</p></div></div>
+              <div id="account-work-list" class="account-work-list" aria-live="polite"></div>
+              <form class="account-settings-form account-work-form" id="account-project-form" hidden>
+                <h4>Нова заявка за проект</h4>
+                <label>Име за контакт<input required type="text" name="name" autocomplete="name" maxlength="100" /></label>
+                <label>Телефон<input required type="tel" name="phone" autocomplete="tel" maxlength="40" /></label>
+                <label>Описание на проекта<textarea required name="description" rows="4" maxlength="2000" placeholder="Опиши накратко от каква услуга имаш нужда"></textarea></label>
+                <button class="account-primary-action" type="submit">Изпрати заявка <span aria-hidden="true">→</span></button>
+                <p class="account-form-status" id="account-project-status" role="status"></p>
+              </form>
+              <form class="account-settings-form account-work-form" id="account-listing-form" hidden>
+                <h4>Нова обява за услуга</h4>
+                <label>Услуга<select name="service" required></select></label>
+                <label>Населено място<select name="city" required></select></label>
+                <label>Описание<textarea required name="description" rows="4" maxlength="2000" placeholder="Опиши услугите и опита си"></textarea></label>
+                <button class="account-primary-action" type="submit">Публикувай обява <span aria-hidden="true">→</span></button>
+                <p class="account-form-status" id="account-listing-status" role="status"></p>
+              </form>
+            </section>
+          </div>
+        </div>
+        <div class="account-footer">
+          <span><span class="account-status-dot" aria-hidden="true"></span> Профилът ти е активен</span>
+          <button class="account-delete-shortcut" type="button" data-account-open-view="privacy">Поверителност и данни</button>
+        </div>
       </section>
     </div>
     <div class="profile-overlay" id="profile-overlay" hidden>
