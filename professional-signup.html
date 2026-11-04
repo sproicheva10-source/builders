@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="bg">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Създай професионален профил в StroiHub." />
+    <title>Регистрация на майстор — StroiHub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="dashboard.css" />
+    <link rel="stylesheet" href="auth-pages.css" />
+    <script src="auth-pages.js" defer></script>
+    <script src="professional-registration.js" defer></script>
+  </head>
+  <body class="auth-page professional-signup-page">
+    <header class="auth-page-header">
+      <a class="brand" href="index.html" aria-label="StroiHub — начална страница"><span class="brand-mark"><img src="stroihub-logo.svg" alt="" /></span><span>Stroi<span>Hub</span></span></a>
+    </header>
+    <main class="auth-page-main">
+      <section class="auth-page-card professional-signup-card">
+        <span class="eyebrow">ПРОФЕСИОНАЛЕН ПРОФИЛ</span>
+        <h1>Регистрация на майстор</h1>
+        <p>Представи услугите си и помогни на клиентите да те открият.</p>
+
+        <nav class="registration-progress" aria-label="Стъпки за регистрация">
+          <button type="button" class="registration-step active" data-step-indicator="0" aria-current="step"><span>01</span> Лични данни</button>
+          <button type="button" class="registration-step" data-step-indicator="1"><span>02</span> Професионална информация</button>
+          <button type="button" class="registration-step" data-step-indicator="2"><span>03</span> Местоположение и завършване</button>
+        </nav>
+
+        <form class="auth-page-form professional-registration-form" data-auth-form="register" data-role="professional" novalidate>
+          <section class="registration-panel" data-step-panel="0" aria-labelledby="personal-heading">
+            <h2 id="personal-heading">Лични данни</h2>
+            <p class="registration-help">Полетата със * са задължителни.</p>
+            <div class="registration-fields">
+              <label>Собствено име *<input required name="firstName" minlength="1" maxlength="50" autocomplete="given-name" /></label>
+              <label>Фамилия *<input required name="lastName" minlength="1" maxlength="50" autocomplete="family-name" /></label>
+              <label>Имейл адрес *<input required type="email" name="email" maxlength="254" autocomplete="email" /></label>
+              <label>Телефонен номер *<input required type="tel" name="phone" maxlength="40" autocomplete="tel" /></label>
+              <label>Парола *<input required type="password" name="password" minlength="8" maxlength="128" autocomplete="new-password" /></label>
+              <label>Повтори паролата *<input required type="password" name="confirmPassword" minlength="8" maxlength="128" autocomplete="new-password" /></label>
+            </div>
+          </section>
+
+          <section class="registration-panel" data-step-panel="1" aria-labelledby="professional-heading" hidden>
+            <h2 id="professional-heading">Професионална информация</h2>
+            <p class="registration-help">Избери категориите и услугите, които предлагаш.</p>
+            <fieldset class="registration-choice-group">
+              <legend>Категории услуги * <span>Отбележи всички подходящи и посочи основната.</span></legend>
+              <div class="category-checkbox-grid" id="registration-categories"></div>
+              <div class="registration-validation" id="category-error" aria-live="polite"></div>
+            </fieldset>
+            <div class="service-selection" id="registration-services"></div>
+            <div class="registration-validation" id="service-error" aria-live="polite"></div>
+            <div class="registration-fields">
+              <label>Професионален опит (в години) *<select required name="experience">
+                <option value="">Избери опит</option>
+                <option value="0">Под 1 година</option>
+                <option value="1">1 година</option>
+                <option value="2">2 години</option>
+                <option value="3">3 години</option>
+                <option value="5">5 години</option>
+                <option value="10">10 години</option>
+                <option value="15">15 години</option>
+                <option value="20">20+ години</option>
+              </select></label>
+              <label class="registration-full-width">Кратко представяне на майстора *<textarea required name="profileDescription" minlength="20" maxlength="600" rows="4" placeholder="Разкажи накратко за опита и начина си на работа."></textarea></label>
+              <fieldset class="registration-choice-group registration-full-width">
+                <legend>Как предпочиташ да работиш? *</legend>
+                <div class="registration-inline-options">
+                  <label class="choice-option"><input required type="radio" name="workPreference" value="Самостоятелно" /> Самостоятелно</label>
+                  <label class="choice-option"><input required type="radio" name="workPreference" value="С екип" /> С екип</label>
+                </div>
+              </fieldset>
+            </div>
+          </section>
+
+          <section class="registration-panel" data-step-panel="2" aria-labelledby="location-heading" hidden>
+            <h2 id="location-heading">Местоположение и завършване</h2>
+            <p class="registration-help">Посочи района, в който приемаш поръчки.</p>
+            <div class="registration-fields">
+              <label>Област *<select required name="region">
+                <option value="">Избери област</option>
+                <option>Благоевград</option><option>Бургас</option><option>Варна</option><option>Велико Търново</option>
+                <option>Видин</option><option>Враца</option><option>Габрово</option><option>Добрич</option>
+                <option>Кърджали</option><option>Кюстендил</option><option>Ловеч</option><option>Монтана</option>
+                <option>Пазарджик</option><option>Перник</option><option>Плевен</option><option>Пловдив</option>
+                <option>Разград</option><option>Русе</option><option>Силистра</option><option>Сливен</option>
+                <option>Смолян</option><option>София-град</option><option>София-област</option><option>Стара Загора</option>
+                <option>Търговище</option><option>Хасково</option><option>Шумен</option><option>Ямбол</option>
+              </select></label>
+              <label>Населено място *<input required name="city" maxlength="80" autocomplete="address-level2" placeholder="Например: Пловдив" /></label>
+              <label class="registration-full-width">Други населени места, в които предлагаш услуги <input name="additionalCities" maxlength="300" placeholder="Раздели населените места със запетая" /></label>
+              <label class="registration-full-width">Линк към Facebook или друга професионална страница <input type="url" name="professionalLink" maxlength="500" pattern="https?://.+" title="Въведи адрес, започващ с http:// или https://" placeholder="https://" autocomplete="url" /></label>
+              <label class="registration-full-width">Профилна снимка
+                <input type="file" name="profilePhoto" accept="image/jpeg,image/png,image/webp" />
+                <span class="registration-help">По желание · JPG, PNG или WebP · до 2 MB</span>
+              </label>
+              <label class="registration-full-width">Снимки на завършени проекти
+                <input type="file" name="portfolioPhotos" accept="image/jpeg,image/png,image/webp" multiple />
+                <span class="registration-help">По желание · до 5 снимки, всяка до 2 MB</span>
+              </label>
+            </div>
+            <div class="registration-validation" id="image-error" role="status" aria-live="polite"></div>
+            <div class="registration-choice-group registration-consents">
+              <label class="checkbox-row"><input required type="checkbox" name="termsAccepted" /> Приемам Общите условия *</label>
+              <label class="checkbox-row"><input required type="checkbox" name="privacyAccepted" /> Запознах се с Политиката за поверителност *</label>
+            </div>
+          </section>
+
+          <div class="registration-controls">
+            <button class="button button-outline" type="button" data-registration-back hidden>Назад</button>
+            <button class="button button-primary" type="button" data-registration-next>Продължи</button>
+            <button class="button button-primary auth-page-submit" type="submit" data-registration-submit hidden>Създай профил</button>
+          </div>
+          <p class="auth-page-status" role="status" aria-live="polite"></p>
+        </form>
+        <p class="auth-page-links"><a href="register.html">← Назад към избора на профил</a><a href="login.html">Вече имаш профил? Вход</a></p>
+      </section>
+    </main>
+  </body>
+</html>

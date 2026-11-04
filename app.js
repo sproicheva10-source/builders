@@ -1,12 +1,3 @@
-const professionals = [
-  {name:"Иван Петров", service:"ВиК услуги", city:"София", rating:"4.9", reviews:"48", avatar:"👷", color:"blue"},
-  {name:"Мария Николова", service:"Боядисване", city:"София", rating:"5.0", reviews:"36", avatar:"👩‍🔧", color:"peach"},
-  {name:"Георги Димитров", service:"Електро услуги", city:"София", rating:"4.8", reviews:"29", avatar:"🧰", color:"sand"},
-  {name:"Петър Стоянов", service:"ВиК услуги", city:"Пловдив", rating:"4.9", reviews:"22", avatar:"👨‍🔧", color:"green"},
-  {name:"Николай Иванов", service:"Монтажи", city:"София", rating:"4.7", reviews:"18", avatar:"🔨", color:"purple"},
-  {name:"Анна Георгиева", service:"Ремонт на баня", city:"Варна", rating:"4.9", reviews:"31", avatar:"👩‍🔨", color:"yellow"}
-];
-
 const grid = document.querySelector("#professional-grid");
 const count = document.querySelector("#result-count");
 const serviceFilter = document.querySelector("#service-filter");
@@ -30,7 +21,6 @@ const authTitle = document.querySelector("#auth-title");
 const authSubtitle = document.querySelector("#auth-subtitle");
 const authMessage = document.querySelector("#auth-message");
 const authSubmit = document.querySelector(".auth-submit");
-const profileOverlay = document.querySelector("#profile-overlay");
 const accountOverlay = document.querySelector("#account-overlay");
 const accountTitle = document.querySelector("#account-title");
 const accountAvatar = document.querySelector("#account-avatar");
@@ -56,16 +46,42 @@ const mainNav = document.querySelector(".main-nav");
 const headerActions = document.querySelector(".header-actions");
 const siteHeader = document.querySelector(".site-header");
 
+function getAuthToken() {
+  return localStorage.getItem("stroihub_token") || sessionStorage.getItem("stroihub_token");
+}
+
+function getAuthUser() {
+  const stored = localStorage.getItem("stroihub_user") || sessionStorage.getItem("stroihub_user");
+  return stored ? JSON.parse(stored) : null;
+}
+
+function storeAuthSession(token, user, remember = true) {
+  localStorage.removeItem("stroihub_token");
+  localStorage.removeItem("stroihub_user");
+  sessionStorage.removeItem("stroihub_token");
+  sessionStorage.removeItem("stroihub_user");
+  const storage = remember ? localStorage : sessionStorage;
+  storage.setItem("stroihub_token", token);
+  storage.setItem("stroihub_user", JSON.stringify(user));
+}
+
+function clearAuthSession() {
+  localStorage.removeItem("stroihub_token");
+  localStorage.removeItem("stroihub_user");
+  sessionStorage.removeItem("stroihub_token");
+  sessionStorage.removeItem("stroihub_user");
+}
+
 const serviceDetails = {
-  all: {icon:"✨", description:"Разгледай всички услуги"},
-  "Боядисване": {icon:"🖌️", description:"Боядисване и шпакловка"},
-  "Електро услуги": {icon:"⚡", description:"Инсталации и осветление"},
-  "ВиК услуги": {icon:"🚿", description:"Тръби и санитария"},
-  "Монтажи": {icon:"🔧", description:"Мебели, врати и кухни"},
-  "Строителство": {icon:"🏗️", description:"Строежи и зидария"},
-  "Ремонти": {icon:"🛠️", description:"Плочки, подове и гипсокартон"},
-  "Дограма и остъкляване": {icon:"🪟", description:"Прозорци и тераси"},
-  "Почистване": {icon:"🧹", description:"Дом и почистване след ремонт"}
+  all: {image:"images/platform-overview.jpg", description:"Разгледай всички услуги"},
+  "Боядисване": {image:"images/painting.jpg", description:"Боядисване и шпакловка"},
+  "Електро услуги": {image:"images/electrical_services.jpg", description:"Инсталации и осветление"},
+  "ВиК услуги": {image:"images/plumbing_services.jpg", description:"Тръби и санитария"},
+  "Монтажи": {image:"images/montage.jpg", description:"Мебели, врати и кухни"},
+  "Строителство": {image:"images/construction.jpg", description:"Строежи и зидария"},
+  "Ремонти": {image:"images/repairs.jpg", description:"Плочки, подове и гипсокартон"},
+  "Дограма и остъкляване": {image:"images/glazing.jpg", description:"Прозорци и тераси"},
+  "Почистване": {image:"images/cleaning.jpg", description:"Дом и почистване след ремонт"}
 };
 
 const serviceOptions = [...serviceFilter.options].map((option) => {
@@ -77,7 +93,7 @@ const serviceOptions = [...serviceFilter.options].map((option) => {
   button.setAttribute("aria-selected", "false");
   button.tabIndex = -1;
   button.dataset.serviceValue = option.value;
-  button.innerHTML = `<span class="service-option-icon" aria-hidden="true">${details.icon}</span><span class="service-option-copy"><strong></strong><small>${details.description}</small></span><span class="service-option-check" aria-hidden="true">✓</span>`;
+  button.innerHTML = `<span class="service-option-icon" aria-hidden="true"><img src="${details.image}" alt="" /></span><span class="service-option-copy"><strong></strong><small>${details.description}</small></span>`;
   button.querySelector("strong").textContent = option.textContent;
   servicePickerOptions.append(button);
   return button;
@@ -91,7 +107,7 @@ const locationOptions = [...locationFilter.options].map((option) => {
   button.setAttribute("aria-selected", "false");
   button.tabIndex = -1;
   button.dataset.locationValue = option.value;
-  button.innerHTML = `<span class="location-option-copy"><strong></strong></span><span class="location-option-check" aria-hidden="true">✓</span>`;
+  button.innerHTML = `<span class="location-option-copy"><strong></strong></span>`;
   button.querySelector("strong").textContent = option.textContent;
   locationPickerResults.append(button);
   return button;
@@ -102,7 +118,7 @@ function updateServicePicker(value = serviceFilter.value) {
   const selectedOption = [...serviceFilter.options].find((option) => option.value === value);
   const details = serviceDetails[value];
   servicePickerValue.textContent = selectedOption.textContent;
-  servicePicker.querySelector(".service-picker-icon").textContent = details.icon;
+  servicePicker.querySelector(".service-picker-icon img").src = details.image;
   servicePicker.querySelector(".service-picker-copy small").textContent = details.description;
   serviceOptions.forEach((option) => {
     const selected = option.dataset.serviceValue === value;
@@ -286,6 +302,7 @@ locationPicker.addEventListener("focusout", () => {
 updateServicePicker();
 updateLocationPicker();
 let authMode = "login";
+let professionals = [];
 
 function showImageFallback(image) {
   const fallback = document.createElement("span");
@@ -309,30 +326,58 @@ function closeMobileMenu() {
   menuButton.setAttribute("aria-label", "Отвори меню");
 }
 
-function renderProfessionals() {
+async function renderProfessionals() {
   const service = serviceFilter.value;
   const selectedLocation = locationFilter.selectedOptions[0];
   const location = (selectedLocation.dataset.cityName || locationFilter.value).trim().toLocaleLowerCase("bg");
-  const filtered = professionals.filter((pro) =>
-    (service === "all" || pro.service === service) &&
-    (!location || pro.city.toLocaleLowerCase("bg").includes(location))
-  );
-  count.textContent = `${filtered.length ? filtered.length : 0} резултата`;
-  grid.innerHTML = filtered.length ? filtered.map((pro) => `
-    <article class="pro-card">
-      <div class="avatar ${pro.color}">${pro.avatar}</div>
-      <div><h3>${pro.name} <span class="verified">✓ Проверен</span></h3><div class="service">${pro.service} · ${pro.city}</div></div>
-      <button class="link-button" type="button" data-profile="${pro.name}">Виж профил</button>
-      <div class="meta"><span class="rating">★ ${pro.rating} <span style="color:#9aa6b0">(${pro.reviews} оценки)</span></span><span>Отговаря до 1 час</span></div>
-    </article>`).join("") : `<div class="empty-state">Няма намерени майстори. Опитайте с друга услуга или локация.</div>`;
-  grid.querySelectorAll("[data-profile]").forEach((button) => button.addEventListener("click", () => {
-    if (!localStorage.getItem("stroihub_token")) {
-      setAuthMode("register", "client");
-      authMessage.textContent = "Създайте профил, за да разгледате профила на майстора.";
+  const query = new URLSearchParams();
+  if (service !== "all") query.set("service", service);
+  if (location) query.set("city", selectedLocation.dataset.cityName || locationFilter.value);
+  grid.replaceChildren();
+  count.textContent = "Зареждане…";
+  try {
+    const response = await fetch(`/api/professionals?${query}`);
+    const result = await response.json().catch(() => []);
+    if (!response.ok) throw new Error(result.message || "Профилите не бяха заредени.");
+    professionals = result;
+    count.textContent = `${professionals.length} резултата`;
+    if (!professionals.length) {
+      const empty = document.createElement("div");
+      empty.className = "empty-state";
+      empty.textContent = "Не открихме публикувани специалисти по тези критерии.";
+      grid.append(empty);
       return;
     }
-    showProfile(button.dataset.profile);
-  }));
+    professionals.forEach((pro) => {
+      const card = document.createElement("article");
+      card.className = "pro-card";
+      const avatar = document.createElement("div");
+      avatar.className = "avatar blue";
+      avatar.textContent = pro.name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toLocaleUpperCase("bg");
+      const identity = document.createElement("div");
+      const name = document.createElement("h3");
+      name.textContent = pro.name;
+      const serviceLabel = document.createElement("div");
+      serviceLabel.className = "service";
+      serviceLabel.textContent = `${pro.service} · ${pro.city}`;
+      const profile = document.createElement("a");
+      profile.className = "link-button";
+      profile.href = `professional-profile.html?id=${encodeURIComponent(pro.id)}`;
+      profile.textContent = "Виж профил";
+      const description = document.createElement("p");
+      description.className = "professional-description";
+      description.textContent = pro.description;
+      identity.append(name, serviceLabel);
+      card.append(avatar, identity, profile, description);
+      grid.append(card);
+    });
+  } catch (error) {
+    count.textContent = "0 резултата";
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.textContent = error.message;
+    grid.append(empty);
+  }
 }
 
 function showToast(message) {
@@ -341,20 +386,8 @@ function showToast(message) {
   window.setTimeout(() => toast.classList.remove("show"), 3200);
 }
 
-function showProfile(name) {
-  const pro = professionals.find((candidate) => candidate.name === name);
-  if (!pro) return;
-  document.querySelector("#profile-avatar").textContent = pro.avatar;
-  document.querySelector("#profile-title").textContent = pro.name;
-  document.querySelector("#profile-service").textContent = `${pro.service} · ${pro.city}`;
-  document.querySelector("#profile-rating").textContent = `★ ${pro.rating}`;
-  document.querySelector("#profile-reviews").textContent = pro.reviews;
-  document.querySelector("#profile-description").textContent = `${pro.name} предлага професионално изпълнение на ${pro.service.toLowerCase()} с внимание към детайла и ясна комуникация.`;
-  profileOverlay.hidden = false;
-}
-
 function showAccountDashboard() {
-  const user = JSON.parse(localStorage.getItem("stroihub_user") || "null");
+  const user = getAuthUser();
   if (!user || typeof user.name !== "string" || typeof user.email !== "string") {
     throw new Error("Информацията за профила не е налична. Влезте отново.");
   }
@@ -370,8 +403,12 @@ function showAccountDashboard() {
   accountRole.textContent = roleLabels[role] || "Потребител";
   accountSettingsForm.elements.name.value = user.name;
   accountSettingsForm.elements.email.value = user.email;
+  accountSettingsForm.elements.phone.value = user.phone || "";
+  accountSettingsForm.elements.city.value = user.city || "";
   document.querySelector("#account-profile-name").textContent = user.name;
   document.querySelector("#account-profile-email").textContent = user.email;
+  document.querySelector("#account-profile-phone").textContent = user.phone || "Не е посочен";
+  document.querySelector("#account-profile-city").textContent = user.city || "Не е посочено";
   document.querySelector("#account-profile-role").textContent = roleLabels[role] || "Потребител";
   const isProfessional = role === "professional" || role === "company";
   accountSettingsStatus.textContent = "";
@@ -421,7 +458,7 @@ function openAccountView(view) {
 }
 
 function accountAuthHeaders() {
-  const token = localStorage.getItem("stroihub_token");
+  const token = getAuthToken();
   if (!token) throw new Error("Сесията е изтекла. Влезте отново.");
   return {Authorization:`Bearer ${token}`};
 }
@@ -430,7 +467,7 @@ async function loadAccountWork() {
   accountWorkList.replaceChildren();
   accountWorkList.textContent = "Зареждане...";
   try {
-    const user = JSON.parse(localStorage.getItem("stroihub_user") || "null");
+    const user = getAuthUser();
     const isProfessional = user?.role === "professional" || user?.role === "company";
     const response = await fetch(isProfessional ? "/api/account/listings" : "/api/account/projects", {
       headers:accountAuthHeaders()
@@ -469,7 +506,7 @@ async function loadAccountWork() {
 }
 
 async function revokeCurrentSession() {
-  const token = localStorage.getItem("stroihub_token");
+  const token = getAuthToken();
   if (!token) return;
   const response = await fetch("/api/auth/logout", {
     method:"POST",
@@ -485,8 +522,7 @@ async function logoutUser() {
     showToast(error.message);
     return;
   }
-  localStorage.removeItem("stroihub_token");
-  localStorage.removeItem("stroihub_user");
+  clearAuthSession();
   window.location.reload();
 }
 
@@ -497,26 +533,23 @@ async function switchAccount() {
     showToast(error.message);
     return;
   }
-  localStorage.removeItem("stroihub_token");
-  localStorage.removeItem("stroihub_user");
+  clearAuthSession();
   accountOverlay.hidden = true;
   setAuthMode("login");
   updateHeaderUser();
 }
 
 function updateHeaderUser() {
-  const user = JSON.parse(localStorage.getItem("stroihub_user") || "null");
+  const user = getAuthUser();
   if (!user) {
-    const login = document.createElement("button");
-    login.type = "button";
+    const login = document.createElement("a");
     login.className = "auth-button login-button";
     login.textContent = "Вход";
-    login.addEventListener("click", () => setAuthMode("login"));
-    const register = document.createElement("button");
-    register.type = "button";
+    login.href = "login.html";
+    const register = document.createElement("a");
     register.className = "auth-button register-button";
-    register.textContent = "Регистрация";
-    register.addEventListener("click", () => setAuthMode("register"));
+    register.textContent = "Регистрирай се";
+    register.href = "register.html";
     headerActions.replaceChildren(login, register);
     return;
   }
@@ -525,7 +558,11 @@ function updateHeaderUser() {
   login.className = "auth-button login-button";
   login.textContent = "Моят профил";
   login.setAttribute("aria-label", `Моят профил: ${user.name}`);
-  login.addEventListener("click", showAccountDashboard);
+  login.addEventListener("click", () => {
+    window.location.href = user.role === "professional" || user.role === "company"
+      ? "professional-dashboard.html"
+      : "client-dashboard.html";
+  });
   const register = document.createElement("button");
   register.type = "button";
   register.className = "auth-button register-button";
@@ -545,8 +582,7 @@ function setAuthMode(mode, role) {
   document.querySelectorAll(".auth-tab").forEach((tab) => tab.classList.toggle("active", tab.dataset.authMode === mode));
   document.querySelectorAll(".register-only").forEach((item) => {
     item.hidden = !isRegister;
-    const input = item.querySelector("input");
-    if (input) input.disabled = !isRegister;
+    item.querySelectorAll("input,select,textarea").forEach((input) => { input.disabled = !isRegister; });
   });
   document.querySelectorAll(".login-only").forEach((item) => { item.hidden = isRegister; });
   document.querySelector("#auth-switch").innerHTML = isRegister
@@ -555,6 +591,9 @@ function setAuthMode(mode, role) {
   authMessage.textContent = "";
   authMessage.classList.remove("error");
   authForm.reset();
+  authForm.elements.password.minLength = isRegister ? 8 : 6;
+  authForm.elements.password.placeholder = isRegister ? "Минимум 8 символа" : "Въведи паролата си";
+  authForm.elements.confirmPassword.minLength = 8;
   if (isRegister && role) {
     const roleOption = authForm.querySelector(`input[name="role"][value="${role}"]`);
     if (!roleOption) throw new Error(`Registration role not found: ${role}`);
@@ -637,7 +676,6 @@ document.querySelectorAll(".benefit-card").forEach((card) => card.addEventListen
   showToast(benefitActions[card.dataset.benefit]);
 }));
 document.querySelector("[data-auth-close]").addEventListener("click", () => { authOverlay.hidden = true; });
-document.querySelector("[data-profile-close]").addEventListener("click", () => { profileOverlay.hidden = true; });
 document.querySelector("[data-account-close]").addEventListener("click", () => { accountOverlay.hidden = true; });
 document.querySelector("[data-account-logout]").addEventListener("click", logoutUser);
 document.querySelector("[data-account-switch]").addEventListener("click", switchAccount);
@@ -650,8 +688,7 @@ document.querySelectorAll("[data-account-delete]").forEach((button) => button.ad
     const response = await fetch("/api/account", {method:"DELETE", headers:accountAuthHeaders()});
     const result = await response.json();
     if (!response.ok) throw new Error(result.message || "Профилът не беше изтрит.");
-    localStorage.removeItem("stroihub_token");
-    localStorage.removeItem("stroihub_user");
+    clearAuthSession();
     accountOverlay.hidden = true;
     updateHeaderUser();
     setAuthMode("register");
@@ -668,13 +705,11 @@ accountNav.addEventListener("click", (event) => {
 document.querySelectorAll("[data-account-open-view]").forEach((button) => {
   button.addEventListener("click", () => openAccountView(button.dataset.accountOpenView));
 });
-profileOverlay.addEventListener("click", (event) => { if (event.target === profileOverlay) profileOverlay.hidden = true; });
 accountOverlay.addEventListener("click", (event) => { if (event.target === accountOverlay) accountOverlay.hidden = true; });
 authOverlay.addEventListener("click", (event) => { if (event.target === authOverlay) authOverlay.hidden = true; });
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     authOverlay.hidden = true;
-    profileOverlay.hidden = true;
     accountOverlay.hidden = true;
   }
 });
@@ -696,11 +731,12 @@ accountSettingsForm.addEventListener("submit", async (event) => {
     const response = await fetch("/api/account", {
       method:"PUT",
       headers:{...accountAuthHeaders(), "Content-Type":"application/json"},
-      body:JSON.stringify({name:data.get("name"), email:data.get("email")})
+      body:JSON.stringify({name:data.get("name"), email:data.get("email"), phone:data.get("phone"), city:data.get("city")})
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.message || "Промените не бяха запазени.");
-    localStorage.setItem("stroihub_user", JSON.stringify(result.user));
+    const storage = localStorage.getItem("stroihub_token") ? localStorage : sessionStorage;
+    storage.setItem("stroihub_user", JSON.stringify(result.user));
     accountTitle.textContent = `Здравей, ${result.user.name.trim().split(/\s+/)[0]}!`;
     accountAvatar.textContent = result.user.name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toLocaleUpperCase("bg");
     accountName.textContent = result.user.name;
@@ -708,6 +744,8 @@ accountSettingsForm.addEventListener("submit", async (event) => {
     accountRole.textContent = result.user.role === "professional" ? "Майстор" : result.user.role === "company" ? "Фирма" : "Клиент";
     document.querySelector("#account-profile-name").textContent = result.user.name;
     document.querySelector("#account-profile-email").textContent = result.user.email;
+    document.querySelector("#account-profile-phone").textContent = result.user.phone || "Не е посочен";
+    document.querySelector("#account-profile-city").textContent = result.user.city || "Не е посочено";
     accountSettingsStatus.textContent = "Промените са запазени.";
     updateHeaderUser();
   } catch (error) {
@@ -767,14 +805,9 @@ authForm.addEventListener("submit", async (event) => {
     authMessage.classList.add("error");
     return;
   }
-  if (authMode === "register" && !data.get("terms")) {
-    authMessage.textContent = "Необходимо е да приемете условията.";
-    authMessage.classList.add("error");
-    return;
-  }
   const endpoint = authMode === "register" ? "/api/auth/register" : "/api/auth/login";
   const payload = authMode === "register"
-    ? {name: data.get("name"), email: data.get("email"), password: data.get("password"), role: data.get("role")}
+    ? {name:data.get("name"), email:data.get("email"), password:data.get("password"), role:data.get("role"), phone:data.get("phone"), city:data.get("city")}
     : {email: data.get("email"), password: data.get("password")};
   authSubmit.disabled = true;
   try {
@@ -784,11 +817,11 @@ authForm.addEventListener("submit", async (event) => {
     if (!result.token || !result.user?.name || !result.user?.email) {
       throw new Error("Сървърът върна непълни данни за профила. Опитайте отново.");
     }
-    localStorage.setItem("stroihub_token", result.token);
-    localStorage.setItem("stroihub_user", JSON.stringify(result.user));
+    storeAuthSession(result.token, result.user, authMode === "register" || authForm.elements.remember.checked);
     authOverlay.hidden = true;
-    updateHeaderUser();
-    showAccountDashboard();
+    window.location.href = result.user.role === "professional" || result.user.role === "company"
+      ? "professional-dashboard.html"
+      : "client-dashboard.html";
   } catch (error) {
     authMessage.textContent = error.message;
     authMessage.classList.add("error");

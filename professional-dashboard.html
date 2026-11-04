@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="bg">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Професионален профил в StroiHub — управлявайте услугите, проектите и запитванията си." />
+    <title>Професионален профил — StroiHub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="dashboard.css" />
+  </head>
+  <body data-dashboard="professional">
+    <header class="dashboard-header">
+      <a class="brand" href="index.html" aria-label="StroiHub — начална страница">
+        <span class="brand-mark"><img src="stroihub-logo.svg" alt="" /></span>
+        <span>Stroi<span>Hub</span></span>
+      </a>
+      <nav class="header-links" aria-label="Навигация в професионалния профил">
+        <a class="active" href="#overview" aria-current="page">Начало</a>
+        <a href="#profile">Профил</a>
+        <a href="#services">Услуги</a>
+        <a href="#portfolio">Портфолио</a>
+        <a href="#requests">Запитвания</a>
+        <a href="#reviews">Отзиви</a>
+        <a href="#statistics">Статистика</a>
+        <a href="#settings">Настройки</a>
+      </nav>
+      <div class="header-user">
+        <a class="profile-shortcut" href="#settings" aria-label="Отвори настройките на профила" title="Настройки на профила">
+          <span class="header-avatar" data-user-initials aria-hidden="true"></span>
+        </a>
+        <span class="header-user-copy"><strong data-user-name></strong><small>Професионален профил</small></span>
+        <button class="text-button" type="button" data-logout>Изход</button>
+      </div>
+    </header>
+
+    <div class="dashboard-layout">
+      <main class="dashboard-main">
+        <section class="welcome-panel professional-welcome" id="overview">
+          <div class="welcome-copy">
+            <span class="eyebrow">ПРОФЕСИОНАЛЕН ПРОФИЛ</span>
+            <h1>Здравейте, <span data-first-name></span>!</h1>
+            <p>Управлявай услугите си, отговаряй на клиентите и представи най-добрата си работа.</p>
+          </div>
+          <a class="button button-light" href="#profile">Редактирай профила</a>
+        </section>
+
+        <section class="dashboard-section stats-section" id="statistics">
+          <div class="section-title">
+            <div><span class="eyebrow">ОБЗОР НА ПРОФИЛА</span><h2>Статистика</h2></div>
+            <span class="demo-note">Данни от профила</span>
+          </div>
+          <div class="stats-grid">
+            <article class="stat-card"><span>Посещения на профила</span><strong>—</strong><small>Не се измерват в тази версия</small></article>
+            <article class="stat-card"><span>Получени запитвания</span><strong data-incoming-request-count>0</strong><small>Общо запитвания</small></article>
+            <article class="stat-card"><span>Средна оценка</span><strong>—</strong><small>Все още няма публикувани отзиви</small></article>
+            <article class="stat-card"><span>Активни услуги</span><strong data-active-service-count>0</strong><small>Публикувани в профила</small></article>
+          </div>
+        </section>
+
+        <section class="dashboard-section panel professional-profile-panel" id="profile">
+          <div class="section-title">
+            <div><span class="eyebrow">ПУБЛИЧНА ИНФОРМАЦИЯ</span><h2>Професионален профил</h2></div>
+            <span class="profile-status">Публичен профил</span>
+          </div>
+          <div class="profile-summary">
+            <img class="profile-photo" src="images/platform-overview.jpg" alt="" />
+            <div class="profile-summary-copy">
+              <span class="service-tag">Професионалист</span>
+              <h3 data-professional-name></h3>
+              <p data-professional-location></p>
+              <p class="profile-description" data-professional-description></p>
+            </div>
+          </div>
+          <form class="settings-form" id="professional-profile-form">
+            <label>Име и фамилия<input name="name" required minlength="2" maxlength="100" autocomplete="name" /></label>
+            <label>Населено място<input name="city" required maxlength="80" autocomplete="address-level2" /></label>
+            <label>Телефон за контакт<input name="phone" type="tel" maxlength="40" autocomplete="tel" /></label>
+            <label>Имейл адрес<input name="email" type="email" maxlength="254" autocomplete="email" /></label>
+            <label>Години опит<input name="experience" type="number" min="0" max="70" /></label>
+            <label class="full-field">Кратко представяне<textarea name="description" rows="3" maxlength="600"></textarea></label>
+            <button class="button button-primary button-small" type="submit">Запази профила</button>
+            <p class="form-feedback" id="professional-profile-feedback" role="status"></p>
+          </form>
+        </section>
+
+        <section class="dashboard-section" id="services">
+          <div class="section-title">
+            <div><span class="eyebrow">КАКВО ПРЕДЛАГАШ</span><h2>Моите услуги</h2></div>
+            <button class="button button-primary button-small" type="button" data-toggle-panel="service-form-wrap">Добави услуга</button>
+          </div>
+          <div class="service-list" id="service-list" aria-live="polite"><p class="empty-copy">Зареждане на услугите…</p></div>
+          <form class="inline-form panel" id="service-form-wrap" hidden>
+            <h3>Добави услуга</h3>
+            <label>Категория<select name="category" required><option value="">Избери категория</option><option>ВиК услуги</option><option>Електро услуги</option><option>Боядисване</option><option>Строителство</option><option>Ремонти</option><option>Монтажи</option><option>Дограма и остъкляване</option><option>Почистване</option></select></label>
+            <label>Име на услугата<input name="title" required maxlength="100" placeholder="Например монтаж на санитария" /></label>
+            <label>Описание<input name="description" required maxlength="240" placeholder="Какво включва услугата?" /></label>
+            <label>Населени места<input name="area" required maxlength="100" placeholder="Например София и околността" /></label>
+            <button class="button button-primary button-small" type="submit">Запази услугата</button>
+            <button class="text-button" type="button" data-cancel-panel>Отказ</button>
+          </form>
+        </section>
+
+        <section class="dashboard-section" id="portfolio">
+          <div class="section-title">
+            <div><span class="eyebrow">ПОКАЖИ ОПИТА СИ</span><h2>Портфолио</h2></div>
+            <button class="button button-primary button-small" type="button" data-toggle-panel="project-form-wrap">Добави проект</button>
+          </div>
+          <div class="portfolio-grid" id="portfolio-grid" aria-live="polite"><p class="empty-copy">Зареждане на проектите…</p></div>
+          <form class="inline-form panel" id="project-form-wrap" hidden>
+            <h3>Добави проект в портфолиото</h3>
+            <label>Заглавие<input name="title" required maxlength="100" placeholder="Например обновяване на баня" /></label>
+            <label>Категория<select name="category" required><option value="">Избери услуга</option><option>ВиК услуги</option><option>Електро услуги</option><option>Боядисване</option><option>Строителство</option><option>Ремонти</option><option>Монтажи</option><option>Дограма и остъкляване</option><option>Почистване</option></select></label>
+            <label>Кратко описание<input name="description" required maxlength="240" placeholder="Какво беше извършено?" /></label>
+            <button class="button button-primary button-small" type="submit">Добави проект</button>
+            <button class="text-button" type="button" data-cancel-panel>Отказ</button>
+          </form>
+        </section>
+
+        <section class="dashboard-section" id="requests">
+          <div class="section-title">
+            <div><span class="eyebrow">ОТ КЛИЕНТИ</span><h2>Получени запитвания</h2></div>
+            <span class="demo-note"><span data-incoming-request-count>0</span> получени запитвания</span>
+          </div>
+          <div class="request-list" id="incoming-requests" aria-live="polite"><p class="empty-copy">Зареждане на запитванията…</p></div>
+        </section>
+
+        <section class="dashboard-section two-column-section">
+          <div class="subsection-card" id="reviews">
+            <div class="section-title compact-title"><div><span class="eyebrow">ОТ КЛИЕНТИ</span><h2>Отзиви и оценки</h2></div></div>
+            <p class="empty-copy">Все още няма публикувани отзиви. Отзивите ще се показват само след реално приключена услуга.</p>
+          </div>
+          <div class="subsection-card">
+            <div class="section-title compact-title"><div><span class="eyebrow">ПОМОЩ И ПОДДРЪЖКА</span><h2>Полезно за профила</h2></div></div>
+            <div class="support-links"><a href="index.html#faq">Често задавани въпроси</a><a href="index.html#contact">Контакт с екипа</a><a href="index.html#contact">Съобщи за проблем</a><a href="index.html#contact">Предложи подобрение</a></div>
+          </div>
+        </section>
+
+        <section class="dashboard-section panel" id="settings">
+          <div class="section-title"><div><span class="eyebrow">ДОСТЪП И СИГУРНОСТ</span><h2>Настройки на профила</h2></div></div>
+          <form class="settings-form" id="professional-settings-form">
+            <label class="settings-toggle"><input name="requestNotifications" type="checkbox" checked /><span>Получавай известия за нови запитвания</span></label>
+            <label class="settings-toggle"><input name="reviewNotifications" type="checkbox" checked /><span>Получавай известия за нови отзиви</span></label>
+            <p class="settings-summary">Настройките се запазват само в този браузър. Смяната на парола и окончателното изтриване на профил изискват свързване с услугата.</p>
+            <button class="button button-primary button-small" type="submit">Запази настройките</button>
+            <p class="form-feedback" id="professional-settings-feedback" role="status"></p>
+          </form>
+        </section>
+
+        <footer class="dashboard-footer"><a href="index.html">StroiHub</a><span>Въпроси? <a href="index.html#contact">Свържи се с нас</a></span><a href="index.html#faq">Помощ и често задавани въпроси</a></footer>
+      </main>
+    </div>
+
+    <div class="toast" id="dashboard-toast" role="status" aria-live="polite"></div>
+    <script src="dashboard.js" defer></script>
+  </body>
+</html>

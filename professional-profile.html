@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="bg">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Профил на специалист в StroiHub." />
+    <title>Профил на специалист — StroiHub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="dashboard.css" />
+    <link rel="stylesheet" href="auth-pages.css" />
+    <script src="professional-profile.js" defer></script>
+  </head>
+  <body data-profile-page>
+    <header class="dashboard-header">
+      <a class="brand" href="index.html" aria-label="StroiHub — начална страница"><span class="brand-mark"><img src="stroihub-logo.svg" alt="" /></span><span>Stroi<span>Hub</span></span></a>
+      <nav class="header-links" aria-label="Навигация"><a href="client-dashboard.html">Клиентско табло</a><a href="index.html#services">Категории</a></nav>
+      <div class="header-user"><a class="button button-outline button-small" href="login.html">Вход</a></div>
+    </header>
+    <main class="dashboard-main">
+      <p class="form-feedback" id="profile-feedback" role="status" aria-live="polite">Зареждане на профила…</p>
+      <section class="panel profile-summary" id="professional-profile" hidden>
+        <img class="profile-photo" id="profile-image" src="images/platform-overview.jpg" alt="" />
+        <div class="profile-summary-copy">
+          <span class="eyebrow">ПРОФЕСИОНАЛЕН ПРОФИЛ</span>
+          <h1 id="profile-name"></h1>
+          <p id="profile-location"></p>
+          <p class="profile-description" id="profile-description"></p>
+          <p class="profile-description" id="profile-details"></p>
+          <div class="card-actions">
+            <button class="button button-primary" type="button" id="send-request">Изпрати запитване</button>
+            <button class="button button-outline" type="button" id="favorite-profile">Добави в любими</button>
+          </div>
+        </div>
+      </section>
+      <section class="dashboard-section" id="profile-services" hidden>
+        <div class="section-title"><div><span class="eyebrow">ПРЕДЛАГАНИ УСЛУГИ</span><h2>Услуги и обслужван район</h2></div></div>
+        <div class="professional-grid" id="profile-listings"></div>
+      </section>
+      <section class="dashboard-section" id="profile-portfolio" hidden>
+        <div class="section-title"><div><span class="eyebrow">ЗАВЪРШЕНИ ПРОЕКТИ</span><h2>Портфолио</h2></div></div>
+        <div class="portfolio-grid" id="profile-portfolio-list"></div>
+      </section>
+      <footer class="dashboard-footer"><a href="index.html">StroiHub</a><a href="index.html#contact">Помощ и контакт</a></footer>
+    </main>
+    <div class="toast" id="dashboard-toast" role="status" aria-live="polite"></div>
+  </body>
+</html>

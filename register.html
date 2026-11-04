@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="bg">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Регистрация — StroiHub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="dashboard.css" />
+    <link rel="stylesheet" href="auth-pages.css" />
+  </head>
+  <body class="auth-page role-selection-page">
+    <main class="auth-page-main">
+      <section class="auth-page-card">
+        <div class="role-selection-heading">
+          <a class="brand role-selection-brand" href="index.html" aria-label="StroiHub — начална страница"><span class="brand-mark"><img src="stroihub-logo.svg" alt="" /></span><span class="role-selection-brand-name"><span>STROI</span><span>HUB</span></span></a>
+          <h1 class="role-selection-title">Присъедини се!</h1>
+        </div>
+        <p class="role-selection-intro">Избери как ще използваш платформата.</p>
+        <div class="role-card-grid">
+          <article class="role-card role-card-client">
+            <span class="role-card-number" aria-hidden="true">01</span>
+            <h2>Клиент</h2>
+            <p>Търсиш майстор за ремонт или строителна услуга? Създай клиентски профил, за да откриваш специалисти и да изпращаш запитвания.</p>
+            <a class="button button-primary" href="signup.html?role=client">Избирам клиентски профил</a>
+          </article>
+          <article class="role-card role-card-professional">
+            <span class="role-card-number" aria-hidden="true">02</span>
+            <h2>Майстор</h2>
+            <p>Предлагаш строителни или ремонтни услуги? Създай професионален профил и представи услугите си пред потенциални клиенти.</p>
+            <a class="button button-primary" href="professional-signup.html">Избирам профил за специалист</a>
+          </article>
+        </div>
+        <p class="auth-page-links role-selection-login"><span>Вече имаш профил? <a href="login.html">Влез тук</a></span></p>
+      </section>
+    </main>
+  </body>
+</html>
