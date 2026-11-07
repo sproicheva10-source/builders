@@ -15,6 +15,7 @@ var dataLock = new object();
 var data = LoadData(dataPath);
 var activeTokens = new Dictionary<string, string>();
 
+app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
@@ -27,10 +28,12 @@ app.MapPost("/api/auth/register", (RegisterRequest request) =>
         request.Password is null || request.Password.Length is < 8 or > 128 ||
         string.IsNullOrWhiteSpace(request.Phone) || request.Phone.Trim().Length > 40 ||
         string.IsNullOrWhiteSpace(request.City) || request.City.Trim().Length > 80 ||
+        string.IsNullOrWhiteSpace(request.Region) || request.Region.Trim().Length > 100 ||
+        !request.TermsAccepted || !request.PrivacyAccepted ||
+        !IsValidImageDataUrl(request.ProfilePhoto, 3 * 1024 * 1024) ||
         request.Role is not ("client" or "professional" or "company") ||
         (isProfessional &&
-            (string.IsNullOrWhiteSpace(request.Region) || request.Region.Trim().Length > 100 ||
-             (request.AdditionalCities?.Trim().Length ?? 0) > 300 ||
+            ((request.AdditionalCities?.Trim().Length ?? 0) > 300 ||
              string.IsNullOrWhiteSpace(request.PrimaryCategory) ||
              request.Categories is not { Count: > 0 and <= 8 } ||
              request.Services is not { Count: > 0 and <= 30 } ||
@@ -48,8 +51,6 @@ app.MapPost("/api/auth/register", (RegisterRequest request) =>
              (!string.IsNullOrWhiteSpace(request.ProfessionalLink) &&
               (!Uri.TryCreate(request.ProfessionalLink, UriKind.Absolute, out var professionalUri) ||
                professionalUri.Scheme is not ("http" or "https"))) ||
-             !request.TermsAccepted || !request.PrivacyAccepted ||
-             !IsValidImageDataUrl(request.ProfilePhoto, 3 * 1024 * 1024) ||
              request.PortfolioPhotos is { Count: > 5 } ||
              (request.PortfolioPhotos?.Any(photo => string.IsNullOrEmpty(photo) ||
                  !IsValidImageDataUrl(photo, 3 * 1024 * 1024)) ?? false) ||
@@ -81,8 +82,8 @@ app.MapPost("/api/auth/register", (RegisterRequest request) =>
             ProfessionalLink = request.ProfessionalLink?.Trim() ?? "",
             ProfilePhoto = request.ProfilePhoto ?? "",
             PortfolioPhotos = request.PortfolioPhotos ?? [],
-            TermsAcceptedAt = isProfessional && request.TermsAccepted ? DateTimeOffset.UtcNow : null,
-            PrivacyAcceptedAt = isProfessional && request.PrivacyAccepted ? DateTimeOffset.UtcNow : null,
+            TermsAcceptedAt = request.TermsAccepted ? DateTimeOffset.UtcNow : null,
+            PrivacyAcceptedAt = request.PrivacyAccepted ? DateTimeOffset.UtcNow : null,
             ProfileDescription = request.ProfileDescription?.Trim() ?? "",
             Experience = request.Experience,
             CreatedAt = DateTimeOffset.UtcNow
@@ -631,7 +632,7 @@ app.MapFallback(async (HttpContext context) =>
     context.Response.StatusCode = StatusCodes.Status404NotFound;
     await context.Response.WriteAsync("Not Found");
 });
-app.Run("http://localhost:8080");
+app.Run();
 
 static string? GetAuthorizedUserId(HttpRequest request, Dictionary<string, string> tokens, object dataLock)
 {

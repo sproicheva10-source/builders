@@ -208,7 +208,7 @@ function initializePreviewMode() {
     const login = createTextElement("a", "text-button", "Вход");
     login.href = "login.html";
     const register = createTextElement("a", "button button-primary button-small", "Създай профил");
-    register.href = "register.html";
+    register.href = "signup.html";
     headerUser.replaceChildren(login, register);
   }
 

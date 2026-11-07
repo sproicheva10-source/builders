@@ -3,40 +3,37 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Създай профил — StroiHub</title>
+    <title>Регистрация</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="dashboard.css" />
     <link rel="stylesheet" href="auth-pages.css" />
-    <script src="auth-pages.js" defer></script>
   </head>
-  <body class="auth-page">
-    <header class="auth-page-header"><a class="brand" href="index.html" aria-label="StroiHub — начална страница"><span class="brand-mark"><img src="stroihub-logo.svg" alt="" /></span><span>Stroi<span>Hub</span></span></a></header>
+  <body class="auth-page role-selection-page">
     <main class="auth-page-main">
       <section class="auth-page-card">
-        <span class="eyebrow">НОВ ПРОФИЛ</span>
-        <h1>Създай своя профил</h1>
-        <p>Регистрирай се, за да откриваш специалисти и да управляваш проектите си.</p>
-        <form class="auth-page-form" data-auth-form="register" data-role="client">
-          <label>Собствено име<input required name="firstName" minlength="1" maxlength="50" autocomplete="given-name" /></label>
-          <label>Фамилия<input required name="lastName" minlength="1" maxlength="50" autocomplete="family-name" /></label>
-          <label>Имейл адрес<input required type="email" name="email" maxlength="254" autocomplete="email" /></label>
-          <label>Телефонен номер<input required type="tel" name="phone" maxlength="40" autocomplete="tel" /></label>
-          <label>Населено място<input required name="city" maxlength="80" autocomplete="address-level2" /></label>
-          <label>Парола<input required type="password" name="password" minlength="8" maxlength="128" autocomplete="new-password" /></label>
-          <label>Повтори паролата<input required type="password" name="confirmPassword" minlength="8" maxlength="128" autocomplete="new-password" /></label>
-          <button class="button button-primary auth-page-submit" type="submit">Създай профил</button>
-          <p class="auth-page-status" role="status" aria-live="polite"></p>
-        </form>
-        <p class="auth-page-links"><a href="register.html">← Назад към избора на профил</a><a href="login.html">Вече имаш профил? Вход</a></p>
+        <div class="role-selection-heading">
+          <a class="brand role-selection-brand" href="index.html" aria-label="Начална страница"><span class="brand-mark"><img src="images/logo.jpg" alt="" /></span></a>
+          <h1 class="role-selection-title">Присъедини се!</h1>
+        </div>
+        <p class="role-selection-intro">Избери как ще използваш платформата.</p>
+        <div class="role-card-grid">
+          <article class="role-card role-card-client">
+            <span class="role-card-number" aria-hidden="true">01</span>
+            <h2>Клиент</h2>
+            <p>Търсиш майстор за ремонт или строителна услуга? Създай клиентски профил, за да откриваш специалисти и да изпращаш запитвания.</p>
+            <a class="button button-primary" href="client-signup.html">Избирам клиентски профил</a>
+          </article>
+          <article class="role-card role-card-professional">
+            <span class="role-card-number" aria-hidden="true">02</span>
+            <h2>Майстор</h2>
+            <p>Предлагаш строителни или ремонтни услуги? Създай професионален профил и представи услугите си пред потенциални клиенти.</p>
+            <a class="button button-primary" href="professional-signup.html">Избирам профил за специалист</a>
+          </article>
+        </div>
+        <p class="auth-page-links role-selection-login"><span>Вече имаш профил? <a href="login.html">Влез тук</a></span></p>
       </section>
     </main>
-    <script>
-      const role = new URLSearchParams(location.search).get("role");
-      if (role === "professional") location.replace("professional-signup.html");
-      else if (role && role !== "client") location.replace("register.html");
-      document.querySelector("h1").textContent = "Създай своя клиентски профил";
-    </script>
   </body>
 </html>

@@ -80,13 +80,15 @@ if (authForm) {
         email:values.get("email"),
         phone:values.get("phone"),
         city:values.get("city"),
+        region:values.get("region"),
         password,
         role:form.dataset.role
       };
+      payload.termsAccepted = values.get("termsAccepted") === "on";
+      payload.privacyAccepted = values.get("privacyAccepted") === "on";
+      const profilePhoto = values.get("profilePhoto");
       if (form.dataset.role === "professional") {
-        const profilePhoto = values.get("profilePhoto");
         const portfolioPhotos = values.getAll("portfolioPhotos");
-        payload.region = values.get("region");
         payload.additionalCities = values.get("additionalCities");
         payload.primaryCategory = values.get("primaryCategory");
         payload.categories = values.getAll("categories");
@@ -105,8 +107,16 @@ if (authForm) {
           showAuthStatus(form, error.message, true);
           return;
         }
-        payload.termsAccepted = values.get("termsAccepted") === "on";
-        payload.privacyAccepted = values.get("privacyAccepted") === "on";
+      } else if (profilePhoto?.size > 0) {
+        submit.disabled = true;
+        showAuthStatus(form, "Подготовка на изображенията…");
+        try {
+          payload.profilePhoto = await readImageFile(profilePhoto);
+        } catch (error) {
+          submit.disabled = false;
+          showAuthStatus(form, error.message, true);
+          return;
+        }
       }
     } else if (mode === "forgot-password") {
       path = "/api/auth/forgot-password";

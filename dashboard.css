@@ -6,7 +6,7 @@
   --dashboard-blue-dark: #096b9c;
   --dashboard-pale: #eff8fc;
   --dashboard-line: #e2eaf0;
-  --dashboard-bg: #f5f8fb;
+  --dashboard-bg: #fff;
   --dashboard-card: #fff;
   --dashboard-green: #19875b;
   font-family: "DM Sans", sans-serif;
@@ -21,7 +21,7 @@ button,a{-webkit-tap-highlight-color:transparent}
 button{color:inherit}
 [hidden]{display:none!important}
 
-.dashboard-header{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:30px;min-height:82px;padding:0 max(5vw,36px);border-bottom:1px solid #edf1f3;background:rgba(255,255,255,.97);box-shadow:0 4px 18px #13263c12;backdrop-filter:blur(10px)}
+.dashboard-header{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:30px;min-height:82px;padding:0 max(5vw,36px);border-bottom:1px solid #edf1f3;background:rgba(255,255,255,.96);box-shadow:0 4px 18px #13263c12;backdrop-filter:blur(10px)}
 .brand{display:flex;align-items:center;gap:10px;color:var(--dashboard-ink);font:800 21px Manrope,sans-serif;text-decoration:none}
 .brand>span:last-child span{color:var(--dashboard-blue)}
 .brand-mark{display:grid;width:42px;height:42px;place-items:center;overflow:hidden;background:transparent}
@@ -48,19 +48,20 @@ button{color:inherit}
 .text-button:hover{text-decoration:underline}
 .dashboard-layout{max-width:1600px;min-height:calc(100vh - 82px);margin:0 auto}
 .dashboard-main{width:100%;max-width:1370px;margin:0 auto;padding:29px clamp(20px,4vw,60px) 25px}
-.welcome-panel{display:flex;min-height:180px;align-items:center;justify-content:space-between;gap:24px;padding:32px 38px;border-radius:14px;background:linear-gradient(108deg,#071849 0%,#102f61 58%,#087eae 100%);color:#fff;box-shadow:0 12px 28px #15395b18}
-.professional-welcome{background:linear-gradient(108deg,#071849 0%,#102f61 58%,#087eae 100%)}
+.welcome-panel{display:flex;min-height:260px;align-items:center;justify-content:space-between;gap:24px;padding:42px clamp(28px,5vw,64px);border:1px solid #e1edf2;border-radius:12px;background:linear-gradient(112deg,#eef9fd 0%,#f8fcfd 55%,#fff 100%);color:var(--dashboard-ink);box-shadow:0 11px 30px #1e71901a}
 .welcome-copy{max-width:650px}
 .eyebrow{display:block;color:var(--dashboard-blue);font-size:10px;font-weight:800;letter-spacing:1.15px}
-.welcome-panel .eyebrow{color:#bcecff}
-.welcome-panel h1{margin:9px 0 7px;font:800 clamp(27px,3vw,37px)/1.2 Manrope,sans-serif;letter-spacing:-.7px}
-.welcome-panel p{max-width:590px;margin:0;color:#e0edf5;font-size:14px}
+.welcome-panel .eyebrow{color:var(--dashboard-blue)}
+.welcome-panel h1{margin:12px 0 16px;font:800 clamp(34px,4vw,52px)/1.1 Manrope,sans-serif;letter-spacing:-1.3px}
+.welcome-panel p{max-width:590px;margin:0;color:var(--dashboard-muted);font-size:16px;line-height:1.6}
 .button{display:inline-flex;min-height:43px;align-items:center;justify-content:center;gap:8px;padding:10px 17px;border:1px solid transparent;border-radius:8px;font-weight:700;text-align:center;text-decoration:none;cursor:pointer;transition:background .18s,border-color .18s,transform .18s}
 .button:hover{transform:translateY(-1px)}
 .button-primary{background:var(--dashboard-blue);color:#fff}
 .button-primary:hover{background:var(--dashboard-blue-dark)}
 .button-light{flex-shrink:0;background:#fff;color:var(--dashboard-blue-dark)}
 .button-light:hover{background:#eaf7fc}
+.welcome-panel .button-light{background:var(--dashboard-blue);color:#fff}
+.welcome-panel .button-light:hover{background:var(--dashboard-blue-dark)}
 .button-outline{border-color:#b9cfdd;background:#fff;color:var(--dashboard-blue-dark)}
 .button-outline:hover{border-color:var(--dashboard-blue);background:#f4fbfe}
 .button-small{min-height:35px;padding:7px 12px;font-size:12px}
@@ -235,8 +236,8 @@ input:focus,select:focus,textarea:focus{border-color:#55a9d2;box-shadow:0 0 0 3p
 }
 @media(max-width:850px){
   .dashboard-main{padding:17px 16px 22px}
-  .welcome-panel{min-height:0;align-items:flex-start;flex-direction:column;padding:25px 22px}
-  .welcome-panel h1{font-size:29px}
+  .welcome-panel{min-height:0;align-items:flex-start;flex-direction:column;padding:30px 22px}
+  .welcome-panel h1{font-size:34px}
   .welcome-panel .button{width:100%}
   .search-form{grid-template-columns:1fr}
   .search-panel{padding:18px}

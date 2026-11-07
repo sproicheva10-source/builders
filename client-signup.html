@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="bg">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Създай клиентски профил в StroiHub и открий подходящия специалист за своя проект." />
+    <title>Регистрация на клиент</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="dashboard.css" />
+    <link rel="stylesheet" href="auth-pages.css" />
+    <script src="auth-pages.js" defer></script>
+    <script src="client-registration.js" defer></script>
+  </head>
+  <body class="auth-page professional-signup-page">
+    <header class="auth-page-header">
+      <a class="brand" href="index.html" aria-label="Начална страница"><span class="brand-mark"><img src="images/logo.jpg" alt="" /></span></a>
+    </header>
+    <main class="auth-page-main">
+      <section class="auth-page-card professional-signup-card">
+        <h1>Създай клиентски профил</h1>
+        <p>Регистрирай се и открий подходящия специалист за своя проект.</p>
+
+        <nav class="registration-progress client-registration-progress" aria-label="Стъпки за регистрация">
+          <button type="button" class="registration-step active" data-step-indicator="0" aria-current="step"><span>01</span> Лични данни</button>
+          <button type="button" class="registration-step" data-step-indicator="1"><span>02</span> Местоположение и достъп</button>
+        </nav>
+
+        <form class="auth-page-form professional-registration-form client-registration-form" data-auth-form="register" data-role="client" novalidate>
+          <section class="registration-panel" data-step-panel="0" aria-labelledby="personal-heading">
+            <h2 id="personal-heading">Лични данни</h2>
+            <p class="registration-help">Полетата със * са задължителни.</p>
+            <div class="registration-fields">
+              <label>Собствено име *<input required name="firstName" minlength="1" maxlength="50" autocomplete="given-name" /></label>
+              <label>Фамилия *<input required name="lastName" minlength="1" maxlength="50" autocomplete="family-name" /></label>
+              <label>Имейл адрес *<input required type="email" name="email" maxlength="254" autocomplete="email" /></label>
+              <label>Телефонен номер *<input required type="tel" name="phone" maxlength="40" autocomplete="tel" /></label>
+            </div>
+          </section>
+
+          <section class="registration-panel" data-step-panel="1" aria-labelledby="location-heading" hidden>
+            <h2 id="location-heading">Местоположение и достъп</h2>
+            <p class="registration-help">Полетата със * са задължителни.</p>
+            <div class="registration-fields">
+              <label>Област *<select required name="region">
+                <option value="">Избери област</option>
+                <option>Благоевград</option><option>Бургас</option><option>Варна</option><option>Велико Търново</option>
+                <option>Видин</option><option>Враца</option><option>Габрово</option><option>Добрич</option>
+                <option>Кърджали</option><option>Кюстендил</option><option>Ловеч</option><option>Монтана</option>
+                <option>Пазарджик</option><option>Перник</option><option>Плевен</option><option>Пловдив</option>
+                <option>Разград</option><option>Русе</option><option>Силистра</option><option>Сливен</option>
+                <option>Смолян</option><option>София-град</option><option>София-област</option><option>Стара Загора</option>
+                <option>Търговище</option><option>Хасково</option><option>Шумен</option><option>Ямбол</option>
+              </select></label>
+              <label>Населено място *<input required name="city" maxlength="80" autocomplete="address-level2" placeholder="Например: Пловдив" /></label>
+              <label>Парола *<input required type="password" name="password" minlength="8" maxlength="128" autocomplete="new-password" /></label>
+              <label>Повтори паролата *<input required type="password" name="confirmPassword" minlength="8" maxlength="128" autocomplete="new-password" /></label>
+              <label class="registration-full-width">Профилна снимка
+                <input type="file" name="profilePhoto" accept="image/jpeg,image/png,image/webp" />
+                <span class="registration-help">Незадължително · JPG, PNG или WebP · до 2 MB</span>
+              </label>
+            </div>
+            <div class="registration-validation" id="image-error" role="status" aria-live="polite"></div>
+            <div class="registration-choice-group registration-consents">
+              <label class="checkbox-row"><input required type="checkbox" name="termsAccepted" /> Приемам Общите условия *</label>
+              <label class="checkbox-row"><input required type="checkbox" name="privacyAccepted" /> Запознат/а съм с Политиката за поверителност *</label>
+            </div>
+          </section>
+
+          <div class="registration-controls">
+            <button class="button button-outline" type="button" data-registration-back hidden>Назад</button>
+            <button class="button button-primary" type="button" data-registration-next>Продължи</button>
+            <button class="button button-primary auth-page-submit" type="submit" data-registration-submit hidden>Създай профил</button>
+          </div>
+          <p class="auth-page-status" role="status" aria-live="polite"></p>
+        </form>
+        <p class="auth-page-links"><a href="signup.html">← Назад към избора на профил</a><a href="login.html">Вече имаш профил? Вход</a></p>
+      </section>
+    </main>
+  </body>
+</html>

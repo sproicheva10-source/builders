@@ -549,7 +549,7 @@ function updateHeaderUser() {
     const register = document.createElement("a");
     register.className = "auth-button register-button";
     register.textContent = "Регистрирай се";
-    register.href = "register.html";
+    register.href = "signup.html";
     headerActions.replaceChildren(login, register);
     return;
   }
@@ -603,7 +603,16 @@ function setAuthMode(mode, role) {
   authForm.querySelector("input:not([type=checkbox])").focus();
 }
 
-document.querySelectorAll("[data-auth]").forEach((button) => button.addEventListener("click", () => setAuthMode(button.dataset.auth, button.dataset.authRole)));
+document.querySelectorAll("[data-auth]").forEach((button) => button.addEventListener("click", () => {
+  const {auth, authRole} = button.dataset;
+  if (auth === "register") {
+    window.location.href = authRole === "professional"
+      ? "professional-signup.html"
+      : authRole === "client" ? "client-signup.html" : "signup.html";
+    return;
+  }
+  setAuthMode(auth, authRole);
+}));
 menuButton.addEventListener("click", () => {
   const isOpen = mainNav.classList.toggle("mobile-open");
   headerActions.classList.toggle("mobile-open", isOpen);
@@ -691,7 +700,7 @@ document.querySelectorAll("[data-account-delete]").forEach((button) => button.ad
     clearAuthSession();
     accountOverlay.hidden = true;
     updateHeaderUser();
-    setAuthMode("register");
+    setAuthMode("login");
     showToast(result.message);
   } catch (error) {
     accountPrivacyStatus.textContent = error.message;
@@ -715,6 +724,10 @@ document.addEventListener("keydown", (event) => {
 });
 document.addEventListener("click", (event) => {
   const modeButton = event.target.closest("[data-auth-mode]");
+  if (modeButton?.dataset.authMode === "register") {
+    window.location.href = "signup.html";
+    return;
+  }
   if (modeButton) setAuthMode(modeButton.dataset.authMode);
 });
 document.querySelector("[data-toggle-password]").addEventListener("click", (event) => {
