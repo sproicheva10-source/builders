@@ -9,8 +9,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="dashboard.css" />
-    <link rel="stylesheet" href="auth-pages.css" />
+    <link rel="stylesheet" href="auth-pages.css?v=20261118-client-location-dropdown" />
     <script src="auth-pages.js?v=20261118-password-email-validation" defer></script>
+    <script src="location-select.js?v=20261118-region-cities-v2" defer></script>
     <script src="client-registration.js" defer></script>
   </head>
   <body class="auth-page professional-signup-page">
@@ -43,7 +44,7 @@
             <h2 id="location-heading">Местоположение и достъп</h2>
             <p class="registration-help">Полетата със * са задължителни.</p>
             <div class="registration-fields">
-              <label>Област *<select required name="region">
+              <label class="location-dropdown-field">Област *<select required name="region" id="registration-region">
                 <option value="">Избери област</option>
                 <option>Благоевград</option><option>Бургас</option><option>Варна</option><option>Велико Търново</option>
                 <option>Видин</option><option>Враца</option><option>Габрово</option><option>Добрич</option>
@@ -53,7 +54,9 @@
                 <option>Смолян</option><option>София-град</option><option>София-област</option><option>Стара Загора</option>
                 <option>Търговище</option><option>Хасково</option><option>Шумен</option><option>Ямбол</option>
               </select></label>
-              <label>Населено място *<input required name="city" maxlength="80" autocomplete="address-level2" placeholder="Например: Пловдив" /></label>
+              <label class="location-dropdown-field">Населено място *<select required name="city" id="registration-city" autocomplete="address-level2" disabled>
+                <option value="">Избери област първо</option>
+              </select><span class="registration-help" id="registration-city-status" role="status">Избери област, за да видиш градовете.</span></label>
               <label>Парола *<input required type="password" name="password" minlength="8" maxlength="128" autocomplete="new-password" /><span class="registration-help">8–128 символа, главна и малка буква и поне една цифра.</span></label>
               <label>Повтори паролата *<input required type="password" name="confirmPassword" minlength="8" maxlength="128" autocomplete="new-password" /></label>
               <label class="registration-full-width">Профилна снимка

@@ -25,6 +25,8 @@ var legacyDataPath = Path.Combine(app.Environment.ContentRootPath, "data.json");
 var dataLock = new object();
 var dbFactory = app.Services.GetRequiredService<IDbContextFactory<StroiHubDbContext>>();
 var data = LoadData(dbFactory, legacyDataPath);
+if (EnsureProfessionalListings(data))
+    SaveData(dbFactory, data);
 var activeTokens = new Dictionary<string, string>();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
@@ -106,6 +108,19 @@ app.MapPost("/api/auth/register", (RegisterRequest request) =>
             CreatedAt = DateTimeOffset.UtcNow
         };
         data.Users.Add(user);
+        if (isProfessional)
+        {
+            data.Listings.AddRange(user.Services.Select(service => new Listing
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                UserId = user.Id,
+                Service = service,
+                Title = service,
+                City = user.City,
+                Description = user.ProfileDescription,
+                CreatedAt = user.CreatedAt
+            }));
+        }
         SaveData(dbFactory, data);
         var token = CreateToken();
         activeTokens[token] = user.Id;
@@ -375,7 +390,9 @@ app.MapGet("/api/professionals", (string? service, string? city) =>
     {
         var profiles = data.Listings
             .Where(listing =>
-                (string.IsNullOrWhiteSpace(service) || listing.Service.Equals(service.Trim(), StringComparison.OrdinalIgnoreCase)) &&
+                (string.IsNullOrWhiteSpace(service) ||
+                 listing.Service.Equals(service.Trim(), StringComparison.OrdinalIgnoreCase) ||
+                 IsServiceInCategory(service.Trim(), listing.Service)) &&
                 (string.IsNullOrWhiteSpace(city) || listing.City.Contains(city.Trim(), StringComparison.OrdinalIgnoreCase)))
             .Select(listing => new
             {
@@ -394,6 +411,7 @@ app.MapGet("/api/professionals", (string? service, string? city) =>
                 name = entry.User!.Name,
                 role = entry.User.Role,
                 service = entry.Service,
+                serviceCategories = GetServiceCategories(entry.Service),
                 title = entry.Title,
                 city = entry.City,
                 description = entry.Description,
@@ -708,6 +726,37 @@ static AppData LoadData(
     return legacyData;
 }
 
+static bool EnsureProfessionalListings(AppData data)
+{
+    var changed = false;
+    foreach (var user in data.Users.Where(user => user.Role is "professional" or "company"))
+    {
+        foreach (var service in user.Services.Where(service => !string.IsNullOrWhiteSpace(service)))
+        {
+            var normalizedService = service.Trim();
+            if (data.Listings.Any(listing =>
+                listing.UserId == user.Id &&
+                listing.Service.Equals(normalizedService, StringComparison.OrdinalIgnoreCase) &&
+                listing.City.Equals(user.City, StringComparison.OrdinalIgnoreCase)))
+                continue;
+
+            data.Listings.Add(new Listing
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                UserId = user.Id,
+                Service = normalizedService,
+                Title = normalizedService,
+                City = user.City,
+                Description = user.ProfileDescription,
+                CreatedAt = user.CreatedAt
+            });
+            changed = true;
+        }
+    }
+
+    return changed;
+}
+
 static bool HasData(AppData data) =>
     data.Users.Count > 0 ||
     data.Projects.Count > 0 ||
@@ -805,6 +854,15 @@ static bool IsServiceInCategory(string category, string service) => category swi
     "Почистване" => service is "Почистване след ремонт" or "Основно почистване" or "Почистване на прозорци",
     _ => false
 };
+
+static string[] GetServiceCategories(string service) =>
+    new[]
+    {
+        "Боядисване", "Електро услуги", "ВиК услуги", "Монтажи",
+        "Строителство", "Ремонти", "Дограма и остъкляване", "Почистване"
+    }
+    .Where(category => IsServiceInCategory(category, service))
+    .ToArray();
 
 static bool IsValidImageDataUrl(string? value, int maxLength)
 {

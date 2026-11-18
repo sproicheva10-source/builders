@@ -321,11 +321,19 @@ async function toggleFavorite(professionalId) {
   }
 }
 
+function normalizeServiceCategory(value) {
+  return value.replace(/\s+/g, "").toLocaleLowerCase("bg");
+}
+
 function renderProfessionalCards(service = "", city = "") {
   const grid = document.querySelector("#professional-grid");
   if (!grid) return;
   const filtered = professionals.filter((professional) =>
-    (!service || professional.service === service) &&
+    (!service ||
+      professional.service === service ||
+      professional.serviceCategories?.some((category) =>
+        normalizeServiceCategory(category) === normalizeServiceCategory(service)
+      )) &&
     (!city || professional.city.toLocaleLowerCase("bg").includes(city.toLocaleLowerCase("bg")))
   );
   grid.replaceChildren();
@@ -389,6 +397,28 @@ function renderProfessionalCards(service = "", city = "") {
   renderFavorites();
 }
 
+function loadSearchCities(select, feedback) {
+  fetch("locations.json")
+    .then((response) => {
+      if (!response.ok) throw new Error(`Неуспешно зареждане на градовете (${response.status}).`);
+      return response.json();
+    })
+    .then((citiesByRegion) => {
+      const selectedCity = select.value;
+      const cities = [...new Set(Object.values(citiesByRegion).flat())]
+        .sort((left, right) => left.localeCompare(right, "bg"));
+      select.replaceChildren(
+        new Option("Всички населени места", ""),
+        ...cities.map((city) => new Option(city, city))
+      );
+      select.value = selectedCity;
+    })
+    .catch((error) => {
+      console.error(error);
+      feedback.textContent = "Списъкът с населени места не се зареди. Презареди страницата.";
+    });
+}
+
 function openRequestDialog(professional) {
   if (isPreviewMode) {
     window.location.href = "login.html";
@@ -421,6 +451,8 @@ async function loadClientDirectory() {
 function initializeClientSearch() {
   const form = document.querySelector("#specialist-search");
   if (!form) return;
+  const searchFeedback = document.querySelector("#search-feedback");
+  loadSearchCities(form.elements.city, searchFeedback);
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     renderProfessionalCards(form.elements.service.value, form.elements.city.value);
