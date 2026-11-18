@@ -147,7 +147,13 @@ function closeServicePicker(returnFocus = false) {
   if (returnFocus) servicePickerTrigger.focus();
 }
 
+function fitPickerMenuToViewport(field, menu) {
+  const availableHeight = window.innerHeight - field.getBoundingClientRect().bottom - 12;
+  menu.style.maxHeight = `${Math.max(120, Math.min(360, window.innerHeight * 0.55, availableHeight))}px`;
+}
+
 function openServicePicker() {
+  fitPickerMenuToViewport(servicePicker, servicePickerOptions);
   servicePickerOptions.hidden = false;
   servicePickerTrigger.setAttribute("aria-expanded", "true");
   const selectedOption = serviceOptions.find((option) => option.dataset.serviceValue === serviceFilter.value);
@@ -161,6 +167,7 @@ function closeLocationPicker(returnFocus = false) {
 }
 
 function openLocationPicker() {
+  fitPickerMenuToViewport(locationPicker, locationPickerOptions);
   locationPickerOptions.hidden = false;
   locationPickerTrigger.setAttribute("aria-expanded", "true");
   locationPickerSearch.value = "";
@@ -366,7 +373,7 @@ async function renderProfessionals() {
       profile.textContent = "Виж профил";
       const description = document.createElement("p");
       description.className = "professional-description";
-      description.textContent = pro.description;
+      description.textContent = pro.description.trim();
       identity.append(name, serviceLabel);
       card.append(avatar, identity, profile, description);
       grid.append(card);

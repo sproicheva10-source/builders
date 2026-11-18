@@ -10,7 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="dashboard.css" />
     <link rel="stylesheet" href="auth-pages.css" />
-    <script src="auth-pages.js" defer></script>
+    <script src="auth-pages.js?v=20261118-password-email-validation" defer></script>
     <script src="client-registration.js" defer></script>
   </head>
   <body class="auth-page professional-signup-page">
@@ -34,8 +34,8 @@
             <div class="registration-fields">
               <label>Собствено име *<input required name="firstName" minlength="1" maxlength="50" autocomplete="given-name" /></label>
               <label>Фамилия *<input required name="lastName" minlength="1" maxlength="50" autocomplete="family-name" /></label>
-              <label>Имейл адрес *<input required type="email" name="email" maxlength="254" autocomplete="email" /></label>
-              <label>Телефонен номер *<input required type="tel" name="phone" maxlength="40" autocomplete="tel" /></label>
+              <label>Имейл адрес *<input required type="email" name="email" maxlength="254" autocomplete="email" placeholder="name@example.com" /></label>
+              <label>Телефонен номер *<input required type="tel" name="phone" value="+" maxlength="20" pattern="\+[0-9]{10,12}" title="Използвай +, международен код и точно 9 цифри след него." inputmode="tel" autocomplete="tel" /><span class="registration-help">Формат: + код на държавата и 9 цифри · например +44 123456789</span></label>
             </div>
           </section>
 
@@ -54,7 +54,7 @@
                 <option>Търговище</option><option>Хасково</option><option>Шумен</option><option>Ямбол</option>
               </select></label>
               <label>Населено място *<input required name="city" maxlength="80" autocomplete="address-level2" placeholder="Например: Пловдив" /></label>
-              <label>Парола *<input required type="password" name="password" minlength="8" maxlength="128" autocomplete="new-password" /></label>
+              <label>Парола *<input required type="password" name="password" minlength="8" maxlength="128" autocomplete="new-password" /><span class="registration-help">8–128 символа, главна и малка буква и поне една цифра.</span></label>
               <label>Повтори паролата *<input required type="password" name="confirmPassword" minlength="8" maxlength="128" autocomplete="new-password" /></label>
               <label class="registration-full-width">Профилна снимка
                 <input type="file" name="profilePhoto" accept="image/jpeg,image/png,image/webp" />

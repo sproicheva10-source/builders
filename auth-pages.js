@@ -25,6 +25,131 @@ function showAuthStatus(form, message, isError = false) {
   status.classList.toggle("error", isError);
 }
 
+function validateRegistrationFields(form) {
+  const email = form.elements.email;
+  validateRegistrationEmail(email);
+
+  const password = form.elements.password;
+  validatePasswordField(password);
+
+  const phone = form.elements.phone;
+  phone.value = normalizeInternationalPhone(phone.value);
+  phone.setCustomValidity(
+    !phone.value ||
+    isValidInternationalPhone(phone.value)
+      ? ""
+      : "Въведи +, валиден международен код и точно 9 цифри след него."
+  );
+
+  for (const name of ["firstName", "lastName"]) {
+    const field = form.elements[name];
+    field.setCustomValidity(
+      !field.value || field.value.trim().length >= 2
+        ? ""
+        : "Въведи поне два символа."
+    );
+  }
+
+  const city = form.elements.city;
+  city.setCustomValidity(
+    !city.value || city.value.trim()
+      ? ""
+      : "Въведи населено място."
+  );
+}
+
+function validateRegistrationEmail(email) {
+  const emailValue = email.value.trim();
+  const emailIsValid = isValidRegistrationEmail(emailValue) &&
+    !email.validity.typeMismatch;
+  email.setCustomValidity(
+    !email.value || emailIsValid
+      ? ""
+      : "Въведи валиден имейл адрес с домейн, например name@example.com."
+  );
+}
+
+function passwordValidationMessage(value) {
+  if (value.length < 8 || value.length > 128)
+    return "Паролата трябва да е между 8 и 128 символа.";
+  if (!/\p{Lu}/u.test(value) || !/\p{Ll}/u.test(value) || !/\p{Nd}/u.test(value))
+    return "Паролата трябва да съдържа главна и малка буква и поне една цифра.";
+  return "";
+}
+
+function validatePasswordField(password) {
+  password.setCustomValidity(passwordValidationMessage(password.value));
+}
+
+function isValidRegistrationEmail(value) {
+  const separator = value.indexOf("@");
+  if (separator <= 0 || separator !== value.lastIndexOf("@")) return false;
+
+  const labels = value.slice(separator + 1).split(".");
+  if (labels.length < 2 ||
+      labels.some((label) =>
+        label.length < 2 ||
+        label.length > 63 ||
+        !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])$/i.test(label))) {
+    return false;
+  }
+  return /^[a-z]{2,}$/i.test(labels[labels.length - 1]) ||
+    /^xn--[a-z0-9-]{2,}$/i.test(labels[labels.length - 1]);
+}
+
+document.querySelectorAll('form[data-auth-form="register"]').forEach((form) => {
+  const email = form.elements.email;
+  const password = form.elements.password;
+  email.addEventListener("input", () => validateRegistrationEmail(email));
+  password.addEventListener("input", () => validatePasswordField(password));
+});
+
+document.querySelectorAll('form[data-auth-form="forgot-password"]').forEach((form) => {
+  const email = form.elements.email;
+  email.addEventListener("input", () => validateRegistrationEmail(email));
+});
+
+document.querySelectorAll('form[data-auth-form="reset-password"]').forEach((form) => {
+  const password = form.elements.password;
+  password.addEventListener("input", () => validatePasswordField(password));
+});
+
+const countryCallingCodes = new Set(
+  (
+    "1 7 20 27 30 31 32 33 34 36 39 40 41 43 44 45 46 47 48 49 " +
+    "51 52 53 54 55 56 57 58 60 61 62 63 64 65 66 81 82 84 86 " +
+    "90 91 92 93 94 95 98 211 212 213 216 218 " +
+    "220 221 222 223 224 225 226 227 228 229 230 231 232 233 234 " +
+    "235 236 237 238 239 240 241 242 243 244 245 246 247 248 249 " +
+    "250 251 252 253 254 255 256 257 258 260 261 262 263 264 265 266 267 268 269 " +
+    "290 291 297 298 299 " +
+    "350 351 352 353 354 355 356 357 358 359 370 371 372 373 374 375 376 377 378 380 381 382 383 385 386 387 389 " +
+    "420 421 423 " +
+    "500 501 502 503 504 505 506 507 508 509 " +
+    "590 591 592 593 594 595 596 597 598 599 " +
+    "670 672 673 674 675 676 677 678 679 680 681 682 683 685 686 687 688 689 690 691 692 " +
+    "850 852 853 855 856 880 886 " +
+    "960 961 962 963 964 965 966 967 968 970 971 972 973 974 975 976 977 " +
+    "992 993 994 995 996 998"
+  ).split(" ")
+);
+
+function normalizeInternationalPhone(value) {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  const compact = trimmed.replace(/[\s().-]/g, "");
+  if (compact.startsWith("+")) return compact;
+  if (compact.startsWith("00")) return `+${compact.slice(2)}`;
+  return `+${compact}`;
+}
+
+function isValidInternationalPhone(value) {
+  const digits = value.startsWith("+") ? value.slice(1) : "";
+  if (!/^[1-9]\d{9,11}$/.test(digits)) return false;
+  return [...countryCallingCodes].some((code) =>
+    digits.startsWith(code) && digits.length - code.length === 9);
+}
+
 function readImageFile(file) {
   if (!file || file.size === 0) return Promise.resolve("");
   return new Promise((resolve, reject) => {
@@ -70,6 +195,12 @@ if (authForm) {
       payload = {email:values.get("email"), password:values.get("password")};
     } else if (mode === "register") {
       const password = String(values.get("password"));
+      const passwordMessage = passwordValidationMessage(password);
+      form.elements.password.setCustomValidity(passwordMessage);
+      if (passwordMessage) {
+        form.elements.password.reportValidity();
+        return;
+      }
       if (password !== values.get("confirmPassword")) {
         showAuthStatus(form, "Паролите не съвпадат.", true);
         return;
@@ -123,6 +254,12 @@ if (authForm) {
       payload = {email:values.get("email")};
     } else {
       const password = String(values.get("password"));
+      const passwordMessage = passwordValidationMessage(password);
+      form.elements.password.setCustomValidity(passwordMessage);
+      if (passwordMessage) {
+        form.elements.password.reportValidity();
+        return;
+      }
       if (password !== values.get("confirmPassword")) {
         showAuthStatus(form, "Паролите не съвпадат.", true);
         return;

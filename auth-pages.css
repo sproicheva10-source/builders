@@ -91,6 +91,29 @@
 .registration-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
 .professional-registration-form label:not(.checkbox-row):not(.choice-option):not(.category-option){gap:7px;font-size:13px}
 .professional-registration-form input:not([type=checkbox]):not([type=radio]),.professional-registration-form select,.professional-registration-form textarea{width:100%;min-height:46px;padding:10px 12px;border:1px solid #d5e0e8;border-radius:9px;background:#fff;color:#12243a;font:500 14px "DM Sans",sans-serif}
+.professional-registration-form [data-step-panel="2"] .registration-fields>label:not(.registration-full-width){align-content:start}
+#registration-city-status{margin:0}
+.location-dropdown-field{gap:9px!important;color:#294962!important;font-size:13px!important;font-weight:700!important}
+.location-dropdown-field select{
+  min-height:58px!important;
+  padding:13px 46px 13px 16px!important;
+  appearance:none;
+  border:1px solid #d4e2ec!important;
+  border-radius:14px!important;
+  background-color:#f9fcfe!important;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='m5 7.5 5 5 5-5' stroke='%23087eae' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")!important;
+  background-position:right 16px center!important;
+  background-repeat:no-repeat!important;
+  background-size:18px!important;
+  box-shadow:0 3px 10px #173a500b,inset 0 1px #fff;
+  color:#142f46!important;
+  font-size:15px!important;
+  font-weight:600!important;
+  transition:border-color .18s,background-color .18s,box-shadow .18s,transform .18s;
+}
+.location-dropdown-field select:hover:not(:disabled){transform:translateY(-1px);border-color:#9fcbdc!important;background-color:#f3faff!important;box-shadow:0 7px 16px #173a5014}
+.location-dropdown-field select:focus-visible{outline:0;border-color:#0786c7!important;background-color:#fff!important;box-shadow:0 0 0 4px #0786c71c,0 8px 18px #173a5012}
+.location-dropdown-field select:disabled{border-color:#e1e8ed!important;background-color:#f2f6f8!important;box-shadow:none;color:#8796a5!important;cursor:not-allowed}
 .professional-registration-form textarea{resize:vertical}
 .professional-registration-form input[type=file]{padding:9px!important}
 .professional-registration-form,.registration-panel,.registration-fields,.registration-full-width{min-width:0}

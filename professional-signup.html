@@ -9,8 +9,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="dashboard.css" />
-    <link rel="stylesheet" href="auth-pages.css" />
-    <script src="auth-pages.js" defer></script>
+    <link rel="stylesheet" href="auth-pages.css?v=20261118-polished-location-fields" />
+    <script src="auth-pages.js?v=20261118-password-email-validation" defer></script>
+    <script src="location-select.js?v=20261118-region-cities-v2" defer></script>
     <script src="professional-registration.js" defer></script>
   </head>
   <body class="auth-page professional-signup-page">
@@ -35,9 +36,9 @@
             <div class="registration-fields">
               <label>Собствено име *<input required name="firstName" minlength="1" maxlength="50" autocomplete="given-name" /></label>
               <label>Фамилия *<input required name="lastName" minlength="1" maxlength="50" autocomplete="family-name" /></label>
-              <label>Имейл адрес *<input required type="email" name="email" maxlength="254" autocomplete="email" /></label>
-              <label>Телефонен номер *<input required type="tel" name="phone" maxlength="40" autocomplete="tel" /></label>
-              <label>Парола *<input required type="password" name="password" minlength="8" maxlength="128" autocomplete="new-password" /></label>
+              <label>Имейл адрес *<input required type="email" name="email" maxlength="254" autocomplete="email" placeholder="name@example.com" /></label>
+              <label>Телефонен номер *<input required type="tel" name="phone" value="+" maxlength="20" pattern="\+[0-9]{10,12}" title="Използвай +, международен код и точно 9 цифри след него." inputmode="tel" autocomplete="tel" /><span class="registration-help">Формат: + код на държавата и 9 цифри · например +44 123456789</span></label>
+              <label>Парола *<input required type="password" name="password" minlength="8" maxlength="128" autocomplete="new-password" /><span class="registration-help">8–128 символа, главна и малка буква и поне една цифра.</span></label>
               <label>Повтори паролата *<input required type="password" name="confirmPassword" minlength="8" maxlength="128" autocomplete="new-password" /></label>
             </div>
           </section>
@@ -79,7 +80,7 @@
             <h2 id="location-heading">Местоположение и завършване</h2>
             <p class="registration-help">Посочи района, в който приемаш поръчки.</p>
             <div class="registration-fields">
-              <label>Област *<select required name="region">
+              <label class="location-dropdown-field">Област *<select required name="region" id="registration-region">
                 <option value="">Избери област</option>
                 <option>Благоевград</option><option>Бургас</option><option>Варна</option><option>Велико Търново</option>
                 <option>Видин</option><option>Враца</option><option>Габрово</option><option>Добрич</option>
@@ -89,7 +90,9 @@
                 <option>Смолян</option><option>София-град</option><option>София-област</option><option>Стара Загора</option>
                 <option>Търговище</option><option>Хасково</option><option>Шумен</option><option>Ямбол</option>
               </select></label>
-              <label>Населено място *<input required name="city" maxlength="80" autocomplete="address-level2" placeholder="Например: Пловдив" /></label>
+              <label class="location-dropdown-field">Град *<select required name="city" id="registration-city" autocomplete="address-level2" disabled>
+                <option value="">Избери област първо</option>
+              </select><span class="registration-help" id="registration-city-status" role="status">Избери област, за да видиш градовете.</span></label>
               <label class="registration-full-width">Други населени места, в които предлагаш услуги <input name="additionalCities" maxlength="300" placeholder="Раздели населените места със запетая" /></label>
               <label class="registration-full-width">Линк към Facebook или друга професионална страница <input type="url" name="professionalLink" maxlength="500" pattern="https?://.+" title="Въведи адрес, започващ с http:// или https://" placeholder="https://" autocomplete="url" /></label>
               <label class="registration-full-width">Профилна снимка

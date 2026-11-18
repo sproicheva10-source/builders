@@ -1,34 +1,51 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http.Json;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
+var contentRoot = ResolveContentRoot();
+var locationsPath = Path.Combine(contentRoot, "locations.json");
+var citiesByRegion = JsonSerializer.Deserialize<Dictionary<string, List<string>>>(File.ReadAllText(locationsPath))
+    ?? throw new InvalidDataException($"Location data at '{locationsPath}' is empty.");
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
     Args = args,
-    ContentRootPath = Directory.GetCurrentDirectory(),
-    WebRootPath = Directory.GetCurrentDirectory()
+    ContentRootPath = contentRoot,
+    WebRootPath = contentRoot
 });
 builder.Services.Configure<JsonOptions>(options => options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase);
+var connectionString = builder.Configuration.GetConnectionString("StroiHub")
+    ?? throw new InvalidOperationException("Connection string 'StroiHub' is not configured.");
+builder.Services.AddDbContextFactory<StroiHubDbContext>(options => options.UseSqlServer(connectionString));
 var app = builder.Build();
-var dataPath = Path.Combine(app.Environment.ContentRootPath, "data.json");
+var legacyDataPath = Path.Combine(app.Environment.ContentRootPath, "data.json");
 var dataLock = new object();
-var data = LoadData(dataPath);
+var dbFactory = app.Services.GetRequiredService<IDbContextFactory<StroiHubDbContext>>();
+var data = LoadData(dbFactory, legacyDataPath);
 var activeTokens = new Dictionary<string, string>();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+app.MapGet("/", () => Results.Redirect("/index.html"));
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
 app.MapPost("/api/auth/register", (RegisterRequest request) =>
 {
     var isProfessional = request.Role == "professional";
+    if (!IsValidEmail(request.Email))
+        return Results.BadRequest(new { message = "Въведи валиден имейл адрес с домейн, например name@example.com." });
+    if (request.Password is null || !IsValidPassword(request.Password))
+        return Results.BadRequest(new { message = "Паролата трябва да е 8–128 символа и да съдържа главна и малка буква и поне една цифра." });
+
     if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Trim().Length > 100 ||
-        string.IsNullOrWhiteSpace(request.Email) || request.Email.Trim().Length > 254 ||
-        !System.Net.Mail.MailAddress.TryCreate(request.Email.Trim(), out _) ||
-        request.Password is null || request.Password.Length is < 8 or > 128 ||
         string.IsNullOrWhiteSpace(request.Phone) || request.Phone.Trim().Length > 40 ||
+        !IsValidPhone(request.Phone) ||
         string.IsNullOrWhiteSpace(request.City) || request.City.Trim().Length > 80 ||
-        string.IsNullOrWhiteSpace(request.Region) || request.Region.Trim().Length > 100 ||
+        !IsValidRegion(request.Region) ||
+        (isProfessional && !IsCityInRegion(citiesByRegion, request.Region, request.City)) ||
         !request.TermsAccepted || !request.PrivacyAccepted ||
         !IsValidImageDataUrl(request.ProfilePhoto, 3 * 1024 * 1024) ||
         request.Role is not ("client" or "professional" or "company") ||
@@ -56,7 +73,7 @@ app.MapPost("/api/auth/register", (RegisterRequest request) =>
                  !IsValidImageDataUrl(photo, 3 * 1024 * 1024)) ?? false) ||
              (request.PortfolioPhotos?.Sum(photo => (long)(photo?.Length ?? 0)) ?? 0) > 14 * 1024 * 1024))
         )
-        return Results.BadRequest(new { message = "Попълнете валидни данни и парола с 8–128 символа." });
+        return Results.BadRequest(new { message = "Попълнете всички задължителни полета с валидни данни." });
 
     lock (dataLock)
     {
@@ -71,7 +88,7 @@ app.MapPost("/api/auth/register", (RegisterRequest request) =>
             Email = email,
             Password = HashPassword(request.Password),
             Role = request.Role!,
-            Phone = request.Phone?.Trim() ?? "",
+            Phone = NormalizePhone(request.Phone),
             City = request.City?.Trim() ?? "",
             Region = request.Region?.Trim() ?? "",
             AdditionalCities = request.AdditionalCities?.Trim() ?? "",
@@ -89,7 +106,7 @@ app.MapPost("/api/auth/register", (RegisterRequest request) =>
             CreatedAt = DateTimeOffset.UtcNow
         };
         data.Users.Add(user);
-        SaveData(dataPath, data);
+        SaveData(dbFactory, data);
         var token = CreateToken();
         activeTokens[token] = user.Id;
         return Results.Ok(new { token, user = new { user.Name, user.Email, user.Role, user.Phone, user.City } });
@@ -132,7 +149,7 @@ app.MapPatch("/api/account/incoming-requests/{projectId}", (HttpRequest httpRequ
         var project = data.Projects.FirstOrDefault(candidate => candidate.Id == projectId && candidate.ProfessionalId == userId);
         if (project is null) return Results.NotFound(new { message = "Запитването не е намерено." });
         project.Status = request.Status;
-        SaveData(dataPath, data);
+        SaveData(dbFactory, data);
         return Results.Ok(new { project.Id, project.Status });
     }
 });
@@ -171,7 +188,7 @@ app.MapPost("/api/account/portfolio", (HttpRequest httpRequest, PortfolioRequest
             CreatedAt = DateTimeOffset.UtcNow
         };
         data.PortfolioProjects.Add(project);
-        SaveData(dataPath, data);
+        SaveData(dbFactory, data);
         return Results.Ok(new { project.Id, project.Title, project.Category, project.Description, project.CreatedAt });
     }
 });
@@ -185,7 +202,7 @@ app.MapDelete("/api/account/portfolio/{projectId}", (HttpRequest httpRequest, st
         var project = data.PortfolioProjects.FirstOrDefault(candidate => candidate.Id == projectId && candidate.UserId == userId);
         if (project is null) return Results.NotFound(new { message = "Проектът не е намерен." });
         data.PortfolioProjects.Remove(project);
-        SaveData(dataPath, data);
+        SaveData(dbFactory, data);
         return Results.Ok(new { message = "Проектът е премахнат." });
     }
 });
@@ -209,8 +226,7 @@ app.MapPost("/api/auth/login", (LoginRequest request) =>
 
 app.MapPost("/api/auth/forgot-password", async (PasswordResetRequest request, IConfiguration configuration) =>
 {
-    if (string.IsNullOrWhiteSpace(request.Email) ||
-        !System.Net.Mail.MailAddress.TryCreate(request.Email.Trim(), out _))
+    if (!IsValidEmail(request.Email))
         return Results.BadRequest(new { message = "Въведи валиден имейл адрес." });
 
     var smtpHost = configuration["STROIHUB_SMTP_HOST"];
@@ -236,7 +252,7 @@ app.MapPost("/api/auth/forgot-password", async (PasswordResetRequest request, IC
         tokenHash = HashResetToken(rawToken);
         user.PasswordResetTokenHash = tokenHash;
         user.PasswordResetExpiresAt = DateTimeOffset.UtcNow.AddHours(1);
-        SaveData(dataPath, data);
+        SaveData(dbFactory, data);
     }
 
     var resetLink = $"{publicUri.ToString().TrimEnd('/')}/reset-password.html?token={Uri.EscapeDataString(rawToken)}";
@@ -265,7 +281,7 @@ app.MapPost("/api/auth/forgot-password", async (PasswordResetRequest request, IC
             {
                 user.PasswordResetTokenHash = "";
                 user.PasswordResetExpiresAt = null;
-                SaveData(dataPath, data);
+                SaveData(dbFactory, data);
             }
         }
         app.Logger.LogError(exception, "Password reset email could not be sent.");
@@ -281,8 +297,10 @@ app.MapPost("/api/auth/forgot-password", async (PasswordResetRequest request, IC
 
 app.MapPost("/api/auth/reset-password", (PasswordResetCompletionRequest request) =>
 {
-    if (string.IsNullOrWhiteSpace(request.Token) || request.Password is null || request.Password.Length is < 8 or > 128)
-        return Results.BadRequest(new { message = "Задай парола с 8–128 символа." });
+    if (string.IsNullOrWhiteSpace(request.Token))
+        return Results.BadRequest(new { message = "Линкът е невалиден или е изтекъл. Поискай нов." });
+    if (request.Password is null || !IsValidPassword(request.Password))
+        return Results.BadRequest(new { message = "Паролата трябва да е 8–128 символа и да съдържа главна и малка буква и поне една цифра." });
 
     var tokenHash = HashResetToken(request.Token);
     lock (dataLock)
@@ -297,7 +315,7 @@ app.MapPost("/api/auth/reset-password", (PasswordResetCompletionRequest request)
         user.PasswordResetExpiresAt = null;
         foreach (var token in activeTokens.Where(entry => entry.Value == user.Id).Select(entry => entry.Key).ToList())
             activeTokens.Remove(token);
-        SaveData(dataPath, data);
+        SaveData(dbFactory, data);
     }
     return Results.Ok(new { message = "Паролата е променена. Влез с новата парола." });
 });
@@ -324,7 +342,7 @@ app.MapPut("/api/account", (HttpRequest httpRequest, AccountUpdateRequest reques
         request.Name.Trim().Length > 100 ||
         string.IsNullOrWhiteSpace(request.Email) ||
         request.Email.Trim().Length > 254 ||
-        !System.Net.Mail.MailAddress.TryCreate(request.Email.Trim(), out _) ||
+        !IsValidEmail(request.Email) ||
         (request.Phone?.Trim().Length ?? 0) > 40 ||
         (request.City?.Trim().Length ?? 0) > 80 ||
         (request.ProfileDescription?.Trim().Length ?? 0) > 600 ||
@@ -346,7 +364,7 @@ app.MapPut("/api/account", (HttpRequest httpRequest, AccountUpdateRequest reques
         if (request.City is not null) user.City = request.City.Trim();
         if (request.ProfileDescription is not null) user.ProfileDescription = request.ProfileDescription.Trim();
         if (request.Experience is not null) user.Experience = request.Experience.Value;
-        SaveData(dataPath, data);
+        SaveData(dbFactory, data);
         return Results.Ok(new { user = new { user.Name, user.Email, user.Role, user.Phone, user.City, user.ProfileDescription, user.Experience } });
     }
 });
@@ -422,7 +440,7 @@ app.MapDelete("/api/account", (HttpRequest httpRequest) =>
         data.Favorites.RemoveAll(favorite => favorite.UserId == userId || favorite.ProfessionalId == userId);
         foreach (var token in activeTokens.Where(entry => entry.Value == userId).Select(entry => entry.Key).ToList())
             activeTokens.Remove(token);
-        SaveData(dataPath, data);
+        SaveData(dbFactory, data);
         return Results.Ok(new { message = "Профилът и свързаните с него данни са изтрити." });
     }
 });
@@ -477,7 +495,7 @@ app.MapPut("/api/account/favorites", (HttpRequest httpRequest, FavoritesRequest 
             .ToList();
         data.Favorites.RemoveAll(favorite => favorite.UserId == userId);
         data.Favorites.AddRange(validIds.Select(id => new Favorite { UserId = userId, ProfessionalId = id }));
-        SaveData(dataPath, data);
+        SaveData(dbFactory, data);
         return Results.Ok(validIds);
     }
 });
@@ -525,7 +543,7 @@ app.MapPost("/api/account/listings", (HttpRequest httpRequest, ListingRequest re
             CreatedAt = DateTimeOffset.UtcNow
         };
         data.Listings.Add(listing);
-        SaveData(dataPath, data);
+        SaveData(dbFactory, data);
         return Results.Ok(new { listing.Id, listing.Service, listing.Title, listing.City, listing.Description, listing.CreatedAt });
     }
 });
@@ -539,7 +557,7 @@ app.MapDelete("/api/account/listings/{listingId}", (HttpRequest httpRequest, str
         var listing = data.Listings.FirstOrDefault(candidate => candidate.Id == listingId && candidate.UserId == userId);
         if (listing is null) return Results.NotFound(new { message = "Обявата не е намерена." });
         data.Listings.Remove(listing);
-        SaveData(dataPath, data);
+        SaveData(dbFactory, data);
         return Results.Ok(new { message = "Обявата е премахната." });
     }
 });
@@ -586,7 +604,7 @@ app.MapPost("/api/projects", (HttpRequest httpRequest, ProjectRequest request) =
             CreatedAt = DateTimeOffset.UtcNow
         };
         data.Projects.Add(project);
-        SaveData(dataPath, data);
+        SaveData(dbFactory, data);
         return Results.Ok(new
         {
             project.Id,
@@ -622,7 +640,7 @@ app.MapPost("/api/contact", (ContactRequest request) =>
             Message = request.Message.Trim(),
             CreatedAt = DateTimeOffset.UtcNow
         });
-        SaveData(dataPath, data);
+        SaveData(dbFactory, data);
     }
     return Results.Ok(new { message = "Съобщението е изпратено успешно." });
 });
@@ -633,6 +651,18 @@ app.MapFallback(async (HttpContext context) =>
     await context.Response.WriteAsync("Not Found");
 });
 app.Run();
+
+static string ResolveContentRoot()
+{
+    DirectoryInfo? directory = new(AppContext.BaseDirectory);
+    while (directory is not null)
+    {
+        if (File.Exists(Path.Combine(directory.FullName, "StroiHub.csproj")))
+            return directory.FullName;
+        directory = directory.Parent;
+    }
+    return Directory.GetCurrentDirectory();
+}
 
 static string? GetAuthorizedUserId(HttpRequest request, Dictionary<string, string> tokens, object dataLock)
 {
@@ -645,23 +675,123 @@ static string? GetAuthorizedUserId(HttpRequest request, Dictionary<string, strin
         return tokens.TryGetValue(token, out var userId) ? userId : null;
 }
 
-static AppData LoadData(string path)
+static AppData LoadData(
+    IDbContextFactory<StroiHubDbContext> dbFactory,
+    string legacyDataPath)
 {
-    if (!File.Exists(path)) return new AppData();
+    using var db = dbFactory.CreateDbContext();
+    db.Database.EnsureCreated();
+    var data = new AppData
+    {
+        Users = db.Users.AsNoTracking().ToList(),
+        Projects = db.Projects.AsNoTracking().ToList(),
+        Listings = db.Listings.AsNoTracking().ToList(),
+        PortfolioProjects = db.PortfolioProjects.AsNoTracking().ToList(),
+        Messages = db.Messages.AsNoTracking().ToList(),
+        Favorites = db.Favorites.AsNoTracking().ToList()
+    };
+    if (HasData(data) || !File.Exists(legacyDataPath))
+        return data;
+
+    AppData legacyData;
     try
     {
-        return JsonSerializer.Deserialize<AppData>(File.ReadAllText(path))
-            ?? throw new InvalidDataException($"Application data at '{path}' is empty.");
+        legacyData = JsonSerializer.Deserialize<AppData>(File.ReadAllText(legacyDataPath))
+            ?? throw new InvalidDataException($"Application data at '{legacyDataPath}' is empty.");
     }
     catch (JsonException exception)
     {
-        throw new InvalidDataException($"Application data at '{path}' is not valid JSON.", exception);
+        throw new InvalidDataException($"Application data at '{legacyDataPath}' is not valid JSON.", exception);
     }
+    if (HasData(legacyData))
+        SaveData(dbFactory, legacyData);
+    return legacyData;
 }
+
+static bool HasData(AppData data) =>
+    data.Users.Count > 0 ||
+    data.Projects.Count > 0 ||
+    data.Listings.Count > 0 ||
+    data.PortfolioProjects.Count > 0 ||
+    data.Messages.Count > 0 ||
+    data.Favorites.Count > 0;
 
 static bool IsProfessionalCategory(string category) =>
     category is "Боядисване" or "Електро услуги" or "ВиК услуги" or "Монтажи" or
         "Строителство" or "Ремонти" or "Дограма и остъкляване" or "Почистване";
+
+static bool IsValidPhone(string phone)
+{
+    var normalized = NormalizePhone(phone);
+    if (!System.Text.RegularExpressions.Regex.IsMatch(normalized, @"^\+[1-9]\d{9,11}$"))
+        return false;
+    var digits = normalized[1..];
+    var countryCallingCodes = "1 7 20 27 30 31 32 33 34 36 39 40 41 43 44 45 46 47 48 49 " +
+        "51 52 53 54 55 56 57 58 60 61 62 63 64 65 66 81 82 84 86 " +
+        "90 91 92 93 94 95 98 211 212 213 216 218 " +
+        "220 221 222 223 224 225 226 227 228 229 230 231 232 233 234 " +
+        "235 236 237 238 239 240 241 242 243 244 245 246 247 248 249 " +
+        "250 251 252 253 254 255 256 257 258 260 261 262 263 264 265 266 267 268 269 " +
+        "290 291 297 298 299 " +
+        "350 351 352 353 354 355 356 357 358 359 370 371 372 373 374 375 376 377 378 380 381 382 383 385 386 387 389 " +
+        "420 421 423 " +
+        "500 501 502 503 504 505 506 507 508 509 " +
+        "590 591 592 593 594 595 596 597 598 599 " +
+        "670 672 673 674 675 676 677 678 679 680 681 682 683 685 686 687 688 689 690 691 692 " +
+        "850 852 853 855 856 880 886 " +
+        "960 961 962 963 964 965 966 967 968 970 971 972 973 974 975 976 977 " +
+        "992 993 994 995 996 998";
+    return countryCallingCodes.Split(' ').Any(code =>
+        digits.StartsWith(code, StringComparison.Ordinal) && digits.Length - code.Length == 9);
+}
+
+static bool IsValidEmail(string? email)
+{
+    if (string.IsNullOrWhiteSpace(email) || email.Trim().Length > 254 ||
+        !System.Net.Mail.MailAddress.TryCreate(email.Trim(), out _))
+        return false;
+
+    var value = email.Trim();
+    var separator = value.IndexOf('@');
+    if (separator <= 0 || separator != value.LastIndexOf('@'))
+        return false;
+
+    var labels = value[(separator + 1)..].Split('.');
+    if (labels.Length < 2 || labels.Any(label =>
+            label.Length is < 2 or > 63 ||
+            !System.Text.RegularExpressions.Regex.IsMatch(label, @"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])$", System.Text.RegularExpressions.RegexOptions.IgnoreCase)))
+        return false;
+
+    var topLevelDomain = labels[^1];
+    return System.Text.RegularExpressions.Regex.IsMatch(topLevelDomain, @"^[a-z]{2,}$", System.Text.RegularExpressions.RegexOptions.IgnoreCase) ||
+        System.Text.RegularExpressions.Regex.IsMatch(topLevelDomain, @"^xn--[a-z0-9-]{2,}$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+}
+
+static bool IsValidPassword(string? password) =>
+    password is { Length: >= 8 and <= 128 } &&
+    password.Any(char.IsUpper) &&
+    password.Any(char.IsLower) &&
+    password.Any(char.IsDigit);
+
+static string NormalizePhone(string? phone) =>
+    System.Text.RegularExpressions.Regex.Replace(phone?.Trim() ?? "", @"[\s().-]", "");
+
+static bool IsValidRegion(string? region) =>
+    region is "Благоевград" or "Бургас" or "Варна" or "Велико Търново" or
+        "Видин" or "Враца" or "Габрово" or "Добрич" or "Кърджали" or
+        "Кюстендил" or "Ловеч" or "Монтана" or "Пазарджик" or "Перник" or
+        "Плевен" or "Пловдив" or "Разград" or "Русе" or "Силистра" or
+        "Сливен" or "Смолян" or "София-град" or "София-област" or
+        "Стара Загора" or "Търговище" or "Хасково" or "Шумен" or "Ямбол";
+
+static bool IsCityInRegion(
+    IReadOnlyDictionary<string, List<string>> citiesByRegion,
+    string? region,
+    string? city) =>
+    region is not null &&
+    city is not null &&
+    citiesByRegion.TryGetValue(region, out var cities) &&
+    cities.Contains(city.Trim(), StringComparer.Ordinal);
 
 static bool IsServiceInCategory(string category, string service) => category switch
 {
@@ -694,8 +824,27 @@ static bool IsValidImageDataUrl(string? value, int maxLength)
     }
 }
 
-static void SaveData(string path, AppData data) =>
-    File.WriteAllText(path, JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true }));
+static void SaveData(IDbContextFactory<StroiHubDbContext> dbFactory, AppData data)
+{
+    using var db = dbFactory.CreateDbContext();
+    using var transaction = db.Database.BeginTransaction();
+    db.Users.RemoveRange(db.Users.ToList());
+    db.Projects.RemoveRange(db.Projects.ToList());
+    db.Listings.RemoveRange(db.Listings.ToList());
+    db.PortfolioProjects.RemoveRange(db.PortfolioProjects.ToList());
+    db.Messages.RemoveRange(db.Messages.ToList());
+    db.Favorites.RemoveRange(db.Favorites.ToList());
+    db.SaveChanges();
+
+    db.Users.AddRange(data.Users);
+    db.Projects.AddRange(data.Projects);
+    db.Listings.AddRange(data.Listings);
+    db.PortfolioProjects.AddRange(data.PortfolioProjects);
+    db.Messages.AddRange(data.Messages);
+    db.Favorites.AddRange(data.Favorites);
+    db.SaveChanges();
+    transaction.Commit();
+}
 
 static string HashPassword(string password)
 {
@@ -759,3 +908,51 @@ class Listing { public string Id { get; set; } = ""; public string UserId { get;
 class PortfolioProject { public string Id { get; set; } = ""; public string UserId { get; set; } = ""; public string Title { get; set; } = ""; public string Category { get; set; } = ""; public string Description { get; set; } = ""; public DateTimeOffset CreatedAt { get; set; } }
 class Favorite { public string UserId { get; set; } = ""; public string ProfessionalId { get; set; } = ""; }
 class ContactMessage { public string Id { get; set; } = ""; public string Name { get; set; } = ""; public string Email { get; set; } = ""; public string Topic { get; set; } = ""; public string Message { get; set; } = ""; public DateTimeOffset CreatedAt { get; set; } }
+
+class StroiHubDbContext(DbContextOptions<StroiHubDbContext> options) : DbContext(options)
+{
+    public DbSet<User> Users => Set<User>();
+    public DbSet<Project> Projects => Set<Project>();
+    public DbSet<Listing> Listings => Set<Listing>();
+    public DbSet<PortfolioProject> PortfolioProjects => Set<PortfolioProject>();
+    public DbSet<Favorite> Favorites => Set<Favorite>();
+    public DbSet<ContactMessage> Messages => Set<ContactMessage>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        var users = modelBuilder.Entity<User>();
+        users.HasKey(user => user.Id);
+        users.Property(user => user.Id).HasMaxLength(32);
+        users.Property(user => user.Email).HasMaxLength(254).IsRequired();
+        users.HasIndex(user => user.Email).IsUnique();
+        ConfigureStringList(users.Property(user => user.Categories));
+        ConfigureStringList(users.Property(user => user.Services));
+        ConfigureStringList(users.Property(user => user.PortfolioPhotos));
+
+        modelBuilder.Entity<Project>().HasKey(project => project.Id);
+        modelBuilder.Entity<Listing>().HasKey(listing => listing.Id);
+        modelBuilder.Entity<PortfolioProject>().HasKey(project => project.Id);
+        var favorites = modelBuilder.Entity<Favorite>();
+        favorites.HasKey(favorite => new { favorite.UserId, favorite.ProfessionalId });
+        favorites.Property(favorite => favorite.UserId).HasMaxLength(64);
+        favorites.Property(favorite => favorite.ProfessionalId).HasMaxLength(64);
+
+        var messages = modelBuilder.Entity<ContactMessage>();
+        messages.HasKey(message => message.Id);
+        messages.Property(message => message.Email).HasMaxLength(254);
+    }
+
+    private static void ConfigureStringList(PropertyBuilder<List<string>> property)
+    {
+        var converter = new ValueConverter<List<string>, string>(
+            value => JsonSerializer.Serialize(value, (JsonSerializerOptions?)null),
+            value => JsonSerializer.Deserialize<List<string>>(value, (JsonSerializerOptions?)null) ?? new List<string>());
+        var comparer = new ValueComparer<List<string>>(
+            (left, right) => left!.SequenceEqual(right!),
+            value => value.Aggregate(0, (hash, item) => HashCode.Combine(hash, item.GetHashCode())),
+            value => value.ToList());
+        property.HasConversion(converter);
+        property.Metadata.SetValueComparer(comparer);
+        property.HasColumnType("nvarchar(max)");
+    }
+}

@@ -32,6 +32,7 @@ function validateStep(step) {
   const panel = registrationPanels[step];
   let valid = true;
   imageError.textContent = "";
+  validateRegistrationFields(registrationForm);
 
   if (step === 1) {
     if (registrationForm.elements.password.value !== registrationForm.elements.confirmPassword.value) {

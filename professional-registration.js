@@ -117,6 +117,7 @@ Object.keys(serviceGroups).forEach((category) => {
 function validateStep(step) {
   const panel = registrationPanels[step];
   let valid = true;
+  validateRegistrationFields(registrationForm);
   if (step === 0 &&
       registrationForm.elements.password.value !== registrationForm.elements.confirmPassword.value) {
     const status = registrationForm.querySelector(".auth-page-status");
