@@ -1,11 +1,18 @@
 const profileId = new URLSearchParams(location.search).get("id");
 const profileStatus = document.querySelector("#profile-feedback");
 const profileSection = document.querySelector("#professional-profile");
+const profileReviewsSection = document.querySelector("#profile-reviews");
+const profileReviewsSummary = document.querySelector("#profile-reviews-summary");
+const profileReviewsList = document.querySelector("#profile-reviews-list");
+const reviewComposeSection = document.querySelector("#review-compose");
+const profileReviewForm = document.querySelector("#profile-review-form");
+const profileReviewFeedback = document.querySelector("#profile-review-feedback");
 const listingSection = document.querySelector("#profile-services");
 const profileListings = document.querySelector("#profile-listings");
 const portfolioSection = document.querySelector("#profile-portfolio");
 const portfolioList = document.querySelector("#profile-portfolio-list");
 const profileToast = document.querySelector("#dashboard-toast");
+const profileHeaderUser = document.querySelector("#profile-header-user");
 const profileImages = {
   "ВиК услуги":"images/plumbing_services.jpg",
   "Електро услуги":"images/electrical_services.jpg",
@@ -16,6 +23,34 @@ const profileImages = {
   "Дограма и остъкляване":"images/glazing.jpg",
   "Почистване":"images/cleaning.jpg"
 };
+
+function updateProfileHeader() {
+  const token = localStorage.getItem("stroihub_token") || sessionStorage.getItem("stroihub_token");
+  const storedUser = localStorage.getItem("stroihub_user") || sessionStorage.getItem("stroihub_user");
+  let user = null;
+  try {
+    user = storedUser ? JSON.parse(storedUser) : null;
+  } catch {
+    user = null;
+  }
+  const action = document.createElement("a");
+  action.className = "button button-outline button-small";
+  if (token && user) {
+    action.href = user.role === "professional" || user.role === "company"
+      ? "professional-dashboard.html"
+      : "client-dashboard.html";
+    action.textContent = "Моят профил";
+    profileHeaderUser.replaceChildren(action);
+    return;
+  }
+  action.href = "login.html";
+  action.textContent = "Вход";
+  const register = document.createElement("a");
+  register.className = "button button-primary button-small";
+  register.href = "signup.html";
+  register.textContent = "Създай профил";
+  profileHeaderUser.replaceChildren(action, register);
+}
 
 function showProfileToast(message) {
   profileToast.textContent = message;
@@ -29,6 +64,126 @@ function profileAuthHeaders() {
   return {Authorization:`Bearer ${token}`};
 }
 
+function getStoredProfileUser() {
+  const storedUser = localStorage.getItem("stroihub_user") || sessionStorage.getItem("stroihub_user");
+  try {
+    return storedUser ? JSON.parse(storedUser) : null;
+  } catch {
+    return null;
+  }
+}
+
+function renderProfileReviews(reviews) {
+  profileReviewsList.replaceChildren();
+  if (!reviews.length) {
+    profileReviewsSection.hidden = true;
+    return;
+  }
+  const realReviews = reviews.filter((review) => !review.isDemo);
+  const demoCount = reviews.length - realReviews.length;
+  profileReviewsSummary.replaceChildren();
+  if (realReviews.length) {
+    const average = realReviews.reduce((sum, review) => sum + review.rating, 0) / realReviews.length;
+    profileReviewsSummary.append(
+      Object.assign(document.createElement("strong"), {textContent: `${average.toFixed(1)} / 5`}),
+      Object.assign(document.createElement("span"), {textContent: `${realReviews.length} реални ${realReviews.length === 1 ? "отзив" : "отзива"}${demoCount ? ` · ${demoCount} примерни` : ""}`})
+    );
+  } else {
+    profileReviewsSummary.append(
+      Object.assign(document.createElement("span"), {textContent: `${demoCount} примерни ${demoCount === 1 ? "отзив" : "отзива"} · не се включват в средната оценка`})
+    );
+  }
+  reviews.forEach((review) => {
+    const card = document.createElement("article");
+    card.className = "review-card";
+    const heading = document.createElement("div");
+    heading.className = "review-heading";
+    const avatar = review.authorPhoto
+      ? document.createElement("img")
+      : document.createElement("span");
+    avatar.className = "review-avatar";
+    if (review.authorPhoto) {
+      avatar.src = review.authorPhoto;
+      avatar.alt = `Профилна снимка на ${review.author}`;
+    } else {
+      avatar.classList.add("review-avatar-placeholder");
+      avatar.textContent = review.author.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toLocaleUpperCase("bg-BG");
+      avatar.setAttribute("aria-label", `Профил на ${review.author}`);
+    }
+    const identity = document.createElement("div");
+    identity.className = "review-identity";
+    const author = document.createElement("strong");
+    author.textContent = review.author;
+    const date = document.createElement("span");
+    date.textContent = new Date(review.createdAt).toLocaleDateString("bg-BG");
+    identity.append(author, date);
+    heading.append(avatar, identity);
+    const rating = document.createElement("span");
+    rating.className = "review-rating";
+    rating.textContent = `${"★".repeat(review.rating)}${"☆".repeat(5 - review.rating)}`;
+    rating.setAttribute("aria-label", `Оценка ${review.rating} от 5`);
+    if (review.isDemo) {
+      const demoLabel = document.createElement("span");
+      demoLabel.className = "review-demo-label";
+      demoLabel.textContent = "Примерен отзив";
+      card.append(heading, rating, demoLabel);
+    } else {
+      card.append(heading, rating);
+    }
+    const comment = document.createElement("p");
+    comment.textContent = review.comment;
+    card.append(comment);
+    profileReviewsList.append(card);
+  });
+  profileReviewsSection.hidden = false;
+}
+
+async function loadEligibleReviewProjects() {
+  const token = localStorage.getItem("stroihub_token") || sessionStorage.getItem("stroihub_token");
+  if (!token || getStoredProfileUser()?.role !== "client") return;
+  try {
+    const response = await fetch(`/api/account/reviews/eligible/${encodeURIComponent(profileId)}`, {
+      headers:profileAuthHeaders()
+    });
+    const projects = await response.json().catch(() => []);
+    if (!response.ok) throw new Error(projects.message || "Завършените услуги не бяха заредени.");
+    if (!projects.length) return;
+    const selector = profileReviewForm.elements.projectId;
+    projects.forEach((project) => {
+      selector.add(new Option(`${project.service || "Услуга"} · ${project.city || "населено място"}`, project.id));
+    });
+    reviewComposeSection.hidden = false;
+  } catch (error) {
+    profileReviewFeedback.textContent = error.message;
+    reviewComposeSection.hidden = false;
+  }
+}
+
+profileReviewForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const submit = profileReviewForm.querySelector('button[type="submit"]');
+  submit.disabled = true;
+  profileReviewFeedback.textContent = "";
+  const formData = new FormData(profileReviewForm);
+  try {
+    const response = await fetch("/api/account/reviews", {
+      method:"POST",
+      headers:{...profileAuthHeaders(),"Content-Type":"application/json"},
+      body:JSON.stringify({
+        projectId:formData.get("projectId"),
+        rating:Number(formData.get("rating")),
+        comment:formData.get("comment")
+      })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.message || "Мнението не беше публикувано.");
+    location.reload();
+  } catch (error) {
+    profileReviewFeedback.textContent = error.message;
+    submit.disabled = false;
+  }
+});
+
 async function loadProfessionalProfile() {
   if (!profileId) {
     profileStatus.textContent = "Липсва идентификатор на профила.";
@@ -41,6 +196,8 @@ async function loadProfessionalProfile() {
     if (!response.ok) throw new Error(profile.message || "Профилът не е намерен.");
     document.title = `${profile.name} — StroiHub`;
     document.querySelector("#profile-name").textContent = profile.name;
+    const profileImage = document.querySelector("#profile-image");
+    profileImage.alt = `Снимка на ${profile.name}`;
     const firstListing = profile.listings[0];
     document.querySelector("#profile-location").textContent = firstListing
       ? `${firstListing.service} · ${firstListing.city}${profile.region ? `, обл. ${profile.region}` : ""}`
@@ -64,7 +221,8 @@ async function loadProfessionalProfile() {
       link.textContent = "Професионална страница";
       profileDetailsElement.append(link);
     }
-    document.querySelector("#profile-image").src = profile.profilePhoto || profileImages[firstListing?.service] || "images/platform-overview.jpg";
+    profileImage.src = profile.profilePhoto || profileImages[firstListing?.service] || "images/platform-overview.jpg";
+    renderProfileReviews(Array.isArray(profile.reviews) ? profile.reviews : []);
     profile.listings.forEach((listing) => {
       const card = document.createElement("article");
       card.className = "professional-card";
@@ -111,6 +269,7 @@ async function loadProfessionalProfile() {
     listingSection.hidden = profile.listings.length === 0;
     portfolioSection.hidden = !(profile.portfolio || []).length && !(profile.portfolioPhotos || []).length;
     profileStatus.textContent = "";
+    await loadEligibleReviewProjects();
     document.querySelector("#send-request").addEventListener("click", () => {
       const token = localStorage.getItem("stroihub_token") || sessionStorage.getItem("stroihub_token");
       if (!token) {
@@ -160,4 +319,5 @@ async function loadProfessionalProfile() {
   }
 }
 
+updateProfileHeader();
 void loadProfessionalProfile();

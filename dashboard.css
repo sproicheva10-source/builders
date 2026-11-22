@@ -88,7 +88,7 @@ input:focus,select:focus,textarea:focus{border-color:#55a9d2;box-shadow:0 0 0 3p
 .category-tile span{position:relative;z-index:1;color:#fff;font-size:13px;font-weight:800;text-shadow:0 1px 5px #0008}
 .professional-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
 .professional-card{overflow:hidden;border:1px solid var(--dashboard-line);border-radius:10px;background:#fff;box-shadow:0 4px 14px #183a5707}
-.professional-image{display:block;width:100%;height:112px;object-fit:cover}
+.professional-image{display:block;width:100%;aspect-ratio:16/10;object-fit:cover;object-position:center 22%}
 .professional-card-body{padding:14px}
 .service-tag{display:inline-block;padding:4px 8px;border-radius:20px;background:#eaf6fb;color:#0876a9;font-size:10px;font-weight:800}
 .professional-card h3,.request-card h3,.portfolio-card h3,.managed-service h3{margin:8px 0 4px;font:700 15px Manrope,sans-serif}
@@ -189,9 +189,25 @@ input:focus,select:focus,textarea:focus{border-color:#55a9d2;box-shadow:0 0 0 3p
 .review-summary span{color:var(--dashboard-muted);font-size:11px}
 .review-card{padding:13px 0;border-bottom:1px solid #edf1f4}
 .review-card:last-child{border-bottom:0}
-.review-heading{display:flex;justify-content:space-between;gap:10px;font-size:11px}
+.review-heading{display:flex;align-items:center;gap:10px;font-size:11px}
 .review-heading span{color:var(--dashboard-muted)}
+.review-avatar{width:42px;height:42px;flex:0 0 42px;border-radius:50%;object-fit:cover;background:#edf3f7}
+.review-avatar-placeholder{display:grid;place-items:center;color:#36566d;font-size:12px;font-weight:800}
+.review-identity{display:grid;gap:3px}
+.review-identity strong{color:var(--dashboard-ink)}
 .review-card>p{color:#52677b;font-size:11px;line-height:1.55}
+.profile-reviews-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.profile-reviews-list .review-card{padding:16px;border:1px solid var(--dashboard-line);border-radius:12px;background:#fff}
+.profile-reviews-list .review-heading{align-items:center;font-size:12px}
+.profile-reviews-list .review-rating{display:block;margin-top:8px;color:#b48016;letter-spacing:1px}
+.review-demo-label{display:inline-block;margin-top:7px;color:#61798b;font-size:10px;font-weight:700}
+.profile-reviews-list .review-card>p{margin:8px 0 0;font-size:13px}
+.professional-reviews-list{display:grid;gap:12px}
+.professional-reviews-list .review-card{padding:12px 0;border-bottom:1px solid #edf1f4}
+.review-compose{padding:20px}
+.review-compose form{display:grid;gap:12px;max-width:620px}
+.review-compose textarea{width:100%;min-height:110px;padding:11px;border:1px solid var(--dashboard-line);border-radius:8px;font:inherit;resize:vertical}
+.review-compose .button{justify-self:start}
 .reply-form{display:grid;gap:7px;margin-top:10px}
 .reply-form label{grid-template-columns:1fr auto;align-items:center;font-size:10px}
 .reply-form input{grid-column:1;min-height:36px;font-size:11px}
@@ -245,7 +261,6 @@ input:focus,select:focus,textarea:focus{border-color:#55a9d2;box-shadow:0 0 0 3p
   .category-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
   .category-tile{min-height:92px}
   .professional-grid{grid-template-columns:1fr}
-  .professional-image{height:145px}
   .two-column-section{grid-template-columns:1fr}
   .section-title h2{font-size:20px}
   .section-title{align-items:start}
@@ -283,4 +298,15 @@ input:focus,select:focus,textarea:focus{border-color:#55a9d2;box-shadow:0 0 0 3p
   .stats-grid{gap:8px}
   .profile-summary{grid-template-columns:78px minmax(0,1fr)}
   .profile-photo{width:78px;height:104px}
+}
+.demo-profile-badge:not([hidden]){display:inline-flex;align-items:center;width:fit-content;margin:6px 0;padding:4px 8px;border-radius:999px;background:#fff2d6;color:#815500;font-size:10px;font-weight:800;line-height:1.35}
+@media(max-width:650px){.profile-reviews-list{grid-template-columns:1fr}}
+
+.skip-link{position:fixed;top:12px;left:12px;z-index:100;padding:12px 16px;transform:translateY(-160%);border-radius:8px;background:#fff;color:#12243a;box-shadow:0 6px 20px #12243a33;font-weight:800}
+.skip-link:focus{transform:translateY(0)}
+:where(a,button,input,select,textarea,[tabindex]):focus-visible{outline:3px solid #e8ad00;outline-offset:3px}
+button:disabled{cursor:not-allowed}
+@media(prefers-reduced-motion:reduce){
+  html:focus-within{scroll-behavior:auto}
+  *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }

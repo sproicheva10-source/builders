@@ -135,10 +135,48 @@ function updateLocationPicker(value = locationFilter.value) {
   });
 }
 
+const pickerCloseTimers = new WeakMap();
+
+function openPickerMenu(field, menu, trigger) {
+  const closeTimer = pickerCloseTimers.get(menu);
+  if (closeTimer) window.clearTimeout(closeTimer);
+  fitPickerMenuToViewport(field, menu);
+  menu.hidden = false;
+  menu.setAttribute("aria-hidden", "false");
+  menu.classList.remove("is-closing");
+  field.classList.add("is-open");
+  trigger.setAttribute("aria-expanded", "true");
+  window.requestAnimationFrame(() => {
+    if (!menu.hidden && trigger.getAttribute("aria-expanded") === "true") {
+      menu.classList.add("is-open");
+    }
+  });
+}
+
+function closePickerMenu(field, menu, trigger, returnFocus = false) {
+  trigger.setAttribute("aria-expanded", "false");
+  menu.setAttribute("aria-hidden", "true");
+  menu.classList.remove("is-open");
+  menu.classList.add("is-closing");
+  field.classList.remove("is-open");
+  if (returnFocus) trigger.focus();
+
+  const closeTimer = pickerCloseTimers.get(menu);
+  if (closeTimer) window.clearTimeout(closeTimer);
+  const finishClose = () => {
+    menu.hidden = true;
+    menu.classList.remove("is-closing");
+    pickerCloseTimers.delete(menu);
+  };
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    finishClose();
+  } else {
+    pickerCloseTimers.set(menu, window.setTimeout(finishClose, 220));
+  }
+}
+
 function closeServicePicker(returnFocus = false) {
-  servicePickerOptions.hidden = true;
-  servicePickerTrigger.setAttribute("aria-expanded", "false");
-  if (returnFocus) servicePickerTrigger.focus();
+  closePickerMenu(servicePicker, servicePickerOptions, servicePickerTrigger, returnFocus);
 }
 
 function fitPickerMenuToViewport(field, menu) {
@@ -147,26 +185,26 @@ function fitPickerMenuToViewport(field, menu) {
 }
 
 function openServicePicker() {
-  fitPickerMenuToViewport(servicePicker, servicePickerOptions);
-  servicePickerOptions.hidden = false;
-  servicePickerTrigger.setAttribute("aria-expanded", "true");
+  openPickerMenu(servicePicker, servicePickerOptions, servicePickerTrigger);
   const selectedOption = serviceOptions.find((option) => option.dataset.serviceValue === serviceFilter.value);
-  (selectedOption || serviceOptions[0]).focus();
+  window.requestAnimationFrame(() => {
+    if (servicePickerTrigger.getAttribute("aria-expanded") === "true") {
+      (selectedOption || serviceOptions[0]).focus();
+    }
+  });
 }
 
 function closeLocationPicker(returnFocus = false) {
-  locationPickerOptions.hidden = true;
-  locationPickerTrigger.setAttribute("aria-expanded", "false");
-  if (returnFocus) locationPickerTrigger.focus();
+  closePickerMenu(locationPicker, locationPickerOptions, locationPickerTrigger, returnFocus);
 }
 
 function openLocationPicker() {
-  fitPickerMenuToViewport(locationPicker, locationPickerOptions);
-  locationPickerOptions.hidden = false;
-  locationPickerTrigger.setAttribute("aria-expanded", "true");
+  openPickerMenu(locationPicker, locationPickerOptions, locationPickerTrigger);
   locationPickerSearch.value = "";
   filterLocationOptions();
-  locationPickerSearch.focus();
+  window.requestAnimationFrame(() => {
+    if (locationPickerTrigger.getAttribute("aria-expanded") === "true") locationPickerSearch.focus();
+  });
 }
 
 function filterLocationOptions() {
@@ -354,7 +392,19 @@ async function renderProfessionals() {
       card.className = "pro-card";
       const avatar = document.createElement("div");
       avatar.className = "avatar blue";
-      avatar.textContent = pro.name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toLocaleUpperCase("bg");
+      const initials = pro.name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toLocaleUpperCase("bg");
+      if (pro.profilePhoto) {
+        const image = document.createElement("img");
+        image.src = pro.profilePhoto;
+        image.alt = `Снимка на ${pro.name}`;
+        image.addEventListener("error", () => {
+          image.remove();
+          avatar.textContent = initials;
+        }, {once:true});
+        avatar.append(image);
+      } else {
+        avatar.textContent = initials;
+      }
       const identity = document.createElement("div");
       const name = document.createElement("h3");
       name.textContent = pro.name;
@@ -577,8 +627,8 @@ function setAuthMode(mode, role) {
   const isRegister = mode === "register";
   authTitle.textContent = isRegister ? "Създайте своя профил" : "Влезте във вашия профил";
   authSubtitle.textContent = isRegister
-    ? "Създайте профил, за да разглеждате специалисти и да откривате подходящи услуги."
-    : "Влезте, за да разглеждате профилите на специалистите.";
+    ? "Създайте профил, за да запазвате любими специалисти и да управлявате заявките си."
+    : "Влезте, за да изпращате запитвания и да управлявате заявките си.";
   authSubmit.textContent = isRegister ? "Създай профил" : "Вход";
   document.querySelectorAll(".auth-tab").forEach((tab) => tab.classList.toggle("active", tab.dataset.authMode === mode));
   document.querySelectorAll(".register-only").forEach((item) => {

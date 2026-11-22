@@ -8,9 +8,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="dashboard.css" />
+    <link rel="stylesheet" href="dashboard.css?v=20261122-professional-portraits" />
+    <link rel="stylesheet" href="ui-refresh.css?v=20261122-preview-5" />
   </head>
   <body data-dashboard="professional">
+    <a class="skip-link" href="#main-content">Към основното съдържание</a>
     <header class="dashboard-header">
       <a class="brand" href="index.html" aria-label="Начална страница">
         <span class="brand-mark"><img src="images/logo.jpg" alt="" /></span>
@@ -35,7 +37,7 @@
     </header>
 
     <div class="dashboard-layout">
-      <main class="dashboard-main">
+      <main class="dashboard-main" id="main-content" tabindex="-1">
         <section class="welcome-panel professional-welcome" id="overview">
           <div class="welcome-copy">
             <span class="eyebrow">ПРОФЕСИОНАЛЕН ПРОФИЛ</span>
@@ -53,7 +55,7 @@
           <div class="stats-grid">
             <article class="stat-card"><span>Посещения на профила</span><strong>—</strong><small>Не се измерват в тази версия</small></article>
             <article class="stat-card"><span>Получени запитвания</span><strong data-incoming-request-count>0</strong><small>Общо запитвания</small></article>
-            <article class="stat-card"><span>Средна оценка</span><strong>—</strong><small>Все още няма публикувани отзиви</small></article>
+            <article class="stat-card"><span>Средна оценка</span><strong data-average-review>—</strong><small data-review-count>Все още няма публикувани отзиви</small></article>
             <article class="stat-card"><span>Активни услуги</span><strong data-active-service-count>0</strong><small>Публикувани в профила</small></article>
           </div>
         </section>
@@ -128,7 +130,7 @@
         <section class="dashboard-section two-column-section">
           <div class="subsection-card" id="reviews">
             <div class="section-title compact-title"><div><span class="eyebrow">ОТ КЛИЕНТИ</span><h2>Отзиви и оценки</h2></div></div>
-            <p class="empty-copy">Все още няма публикувани отзиви. Отзивите ще се показват само след реално приключена услуга.</p>
+            <div class="professional-reviews-list" id="professional-reviews-list" aria-live="polite"><p class="empty-copy">Зареждане на отзивите…</p></div>
           </div>
           <div class="subsection-card">
             <div class="section-title compact-title"><div><span class="eyebrow">ПОМОЩ И ПОДДРЪЖКА</span><h2>Полезно за профила</h2></div></div>

@@ -19,13 +19,24 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 builder.Services.Configure<JsonOptions>(options => options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase);
 var connectionString = builder.Configuration.GetConnectionString("StroiHub")
     ?? throw new InvalidOperationException("Connection string 'StroiHub' is not configured.");
-builder.Services.AddDbContextFactory<StroiHubDbContext>(options => options.UseSqlServer(connectionString));
+var databaseProvider = builder.Configuration["DatabaseProvider"] ?? "SqlServer";
+builder.Services.AddDbContextFactory<StroiHubDbContext>(options =>
+{
+    if (string.Equals(databaseProvider, "Sqlite", StringComparison.OrdinalIgnoreCase))
+        options.UseSqlite(connectionString);
+    else
+        options.UseSqlServer(connectionString);
+});
 var app = builder.Build();
 var legacyDataPath = Path.Combine(app.Environment.ContentRootPath, "data.json");
 var dataLock = new object();
 var dbFactory = app.Services.GetRequiredService<IDbContextFactory<StroiHubDbContext>>();
 var data = LoadData(dbFactory, legacyDataPath);
+var dataChanged = app.Environment.IsDevelopment() &&
+    EnsureDemoProfessionals(data, app.Environment.ContentRootPath);
 if (EnsureProfessionalListings(data))
+    dataChanged = true;
+if (dataChanged)
     SaveData(dbFactory, data);
 var activeTokens = new Dictionary<string, string>();
 
@@ -410,11 +421,14 @@ app.MapGet("/api/professionals", (string? service, string? city) =>
                 id = entry.UserId,
                 name = entry.User!.Name,
                 role = entry.User.Role,
+                profilePhoto = entry.User.ProfilePhoto,
+                isDemo = IsDemoProfessional(entry.User),
                 service = entry.Service,
                 serviceCategories = GetServiceCategories(entry.Service),
                 title = entry.Title,
                 city = entry.City,
                 description = entry.Description,
+                reviews = GetPublishedReviews(data, entry.UserId),
                 createdAt = entry.CreatedAt
             })
             .ToList();
@@ -436,7 +450,7 @@ app.MapGet("/api/professionals/{userId}", (string userId) =>
             .OrderByDescending(project => project.CreatedAt)
             .Select(project => new { project.Title, project.Category, project.Description, project.CreatedAt })
             .ToList();
-        return Results.Ok(new { id = user.Id, name = user.Name, role = user.Role, city = user.City, region = user.Region, additionalCities = user.AdditionalCities, description = user.ProfileDescription, experience = user.Experience, primaryCategory = user.PrimaryCategory, categories = user.Categories, services = user.Services, workPreference = user.WorkPreference, professionalLink = user.ProfessionalLink, profilePhoto = user.ProfilePhoto, portfolioPhotos = user.PortfolioPhotos, listings, portfolio });
+        return Results.Ok(new { id = user.Id, name = user.Name, role = user.Role, isDemo = IsDemoProfessional(user), city = user.City, region = user.Region, additionalCities = user.AdditionalCities, description = user.ProfileDescription, experience = user.Experience, primaryCategory = user.PrimaryCategory, categories = user.Categories, services = user.Services, workPreference = user.WorkPreference, professionalLink = user.ProfessionalLink, profilePhoto = user.ProfilePhoto, portfolioPhotos = user.PortfolioPhotos, reviews = GetProfileReviews(data, user), listings, portfolio });
     }
 });
 
@@ -486,6 +500,86 @@ app.MapGet("/api/account/projects", (HttpRequest httpRequest) =>
             })
             .ToList();
         return Results.Ok(projects);
+    }
+});
+
+app.MapGet("/api/account/reviews/eligible/{professionalId}", (HttpRequest httpRequest, string professionalId) =>
+{
+    var userId = GetAuthorizedUserId(httpRequest, activeTokens, dataLock);
+    if (userId is null) return Results.Unauthorized();
+    lock (dataLock)
+    {
+        var user = data.Users.FirstOrDefault(candidate => candidate.Id == userId);
+        if (user is null) return Results.NotFound(new { message = "Профилът не е намерен." });
+        if (user.Role != "client") return Results.Forbid();
+        return Results.Ok(data.Projects
+            .Where(project => project.UserId == userId &&
+                project.ProfessionalId == professionalId &&
+                project.Status == "Приключено" &&
+                !data.Reviews.Any(review => review.ProjectId == project.Id))
+            .OrderByDescending(project => project.CreatedAt)
+            .Select(project => new { project.Id, project.Service, project.City, project.CreatedAt })
+            .ToList());
+    }
+});
+
+app.MapGet("/api/account/reviews", (HttpRequest httpRequest) =>
+{
+    var userId = GetAuthorizedUserId(httpRequest, activeTokens, dataLock);
+    if (userId is null) return Results.Unauthorized();
+    lock (dataLock)
+    {
+        var user = data.Users.FirstOrDefault(candidate => candidate.Id == userId);
+        if (user is null) return Results.NotFound(new { message = "Профилът не е намерен." });
+        if (user.Role is not ("professional" or "company")) return Results.Forbid();
+        var reviews = GetPublishedReviews(data, userId);
+        var average = reviews.Length == 0 ? (double?)null : reviews.Average(review => review.Rating);
+        return Results.Ok(new { reviews, average });
+    }
+});
+
+app.MapPost("/api/account/reviews", (HttpRequest httpRequest, ReviewRequest request) =>
+{
+    var userId = GetAuthorizedUserId(httpRequest, activeTokens, dataLock);
+    if (userId is null) return Results.Unauthorized();
+    if (string.IsNullOrWhiteSpace(request.ProjectId) || request.ProjectId.Length > 64 ||
+        request.Rating is < 1 or > 5 ||
+        string.IsNullOrWhiteSpace(request.Comment) ||
+        request.Comment.Trim().Length is < 10 or > 1000)
+        return Results.BadRequest(new { message = "Избери оценка от 1 до 5 и напиши мнение от 10 до 1000 символа." });
+
+    lock (dataLock)
+    {
+        var user = data.Users.FirstOrDefault(candidate => candidate.Id == userId);
+        if (user is null) return Results.NotFound(new { message = "Профилът не е намерен." });
+        if (user.Role != "client") return Results.Forbid();
+        var project = data.Projects.FirstOrDefault(candidate =>
+            candidate.Id == request.ProjectId &&
+            candidate.UserId == userId &&
+            candidate.Status == "Приключено" &&
+            !string.IsNullOrWhiteSpace(candidate.ProfessionalId));
+        if (project is null)
+            return Results.Conflict(new { message = "Мнение може да се остави само за приключена услуга от твоя профил." });
+        if (data.Reviews.Any(review => review.ProjectId == project.Id))
+            return Results.Conflict(new { message = "Вече има публикувано мнение за тази услуга." });
+        if (!data.Users.Any(candidate =>
+                candidate.Id == project.ProfessionalId &&
+                candidate.Role is "professional" or "company"))
+            return Results.Conflict(new { message = "Профилът на специалиста вече не е наличен." });
+
+        var review = new Review
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            ProjectId = project.Id,
+            ProfessionalId = project.ProfessionalId,
+            ReviewerId = userId,
+            Rating = request.Rating,
+            Comment = request.Comment.Trim(),
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        data.Reviews.Add(review);
+        SaveData(dbFactory, data);
+        return Results.Created($"/api/professionals/{project.ProfessionalId}", new { review.Id });
     }
 });
 
@@ -766,12 +860,74 @@ static string? GetAuthorizedUserId(HttpRequest request, Dictionary<string, strin
         return tokens.TryGetValue(token, out var userId) ? userId : null;
 }
 
+static PublishedReview[] GetPublishedReviews(AppData data, string professionalId) =>
+    data.Reviews
+        .Where(review => review.ProfessionalId == professionalId)
+        .OrderByDescending(review => review.CreatedAt)
+        .Select(review =>
+        {
+            var reviewer = data.Users.FirstOrDefault(user => user.Id == review.ReviewerId);
+            return reviewer is null
+                ? null
+                : new PublishedReview(reviewer.Name, reviewer.ProfilePhoto, review.Rating, review.Comment, review.CreatedAt, false);
+        })
+        .Where(review => review is not null)
+        .Select(review => review!)
+        .ToArray();
+
+static PublishedReview[] GetProfileReviews(AppData data, User professional) =>
+    GetPublishedReviews(data, professional.Id)
+        .Concat(GetDemoReviews(professional))
+        .OrderByDescending(review => review.CreatedAt)
+        .ToArray();
+
+static PublishedReview[] GetDemoReviews(User professional)
+{
+    if (!IsDemoProfessional(professional) ||
+        !int.TryParse(professional.Email.AsSpan("demo-pro-".Length, 2), out var number))
+        return [];
+
+    var review = number switch
+    {
+        1 => new DemoReviewSeed("Ралица Тодорова", "image_b2f9b43f.jpg", 5, "Подготовката на стените беше много старателна, а боята легна равномерно. Работното място остана чисто.", 8),
+        2 => new DemoReviewSeed("Никола Маринов", "image_b57e7376.jpg", 5, "Смяната на смесителя и сифона мина бързо. Получих ясна информация какви части са нужни.", 9),
+        3 => new DemoReviewSeed("Елена Петрова", "image_c352862.jpg", 5, "Монтира осветителните тела внимателно и провери работата им преди да приключи.", 10),
+        4 => new DemoReviewSeed("Мартин Георгиев", "image_cf9fb080.jpg", 4, "Няколко домашни поправки бяха изпълнени в уговорения ден и с добра комуникация.", 11),
+        5 => new DemoReviewSeed("Десислава Николова", "image_dfa67aaf.jpg", 5, "Сглоби мебелите стабилно и нивелира шкафовете. Много внимателна работа.", 12),
+        6 => new DemoReviewSeed("Пламен Стоянов", "image_e15ec964.jpg", 5, "Регулирането на дограмата помогна прозорците да се затварят добре. Обясни и какво е направено.", 13),
+        7 => new DemoReviewSeed("Силвия Димова", "image_f0fd81f2.jpg", 5, "Почистването след ремонта беше подробно, включително по первазите и труднодостъпните места.", 14),
+        8 => new DemoReviewSeed("Виктор Илиев", "image_2e98e854.jpg", 4, "Зидарската работа беше добре планирана и изпълнена според уговорения обхват.", 15),
+        9 => new DemoReviewSeed("Анна Христова", "image_5aecc4ec.jpg", 5, "Стените бяха подготвени добре и цветът стана точно както го бяхме уточнили.", 16),
+        10 => new DemoReviewSeed("Борис Колев", "image_9bdeee59.jpg", 5, "Монтажът на санитарните аксесоари беше чист и прецизен. Всичко беше проверено накрая.", 17),
+        _ => default
+    };
+
+    if (review is null)
+        return [];
+
+    var photoPath = Path.Combine("images", "New folder", review.Photo);
+    if (!File.Exists(Path.Combine(ResolveContentRoot(), photoPath)))
+        return [];
+
+    return
+    [
+        new PublishedReview(
+            review.Author,
+            "/images/New%20folder/" + review.Photo,
+            review.Rating,
+            review.Comment,
+            new DateTimeOffset(2026, 11, review.Day, 12, 0, 0, TimeSpan.FromHours(2)),
+            true)
+    ];
+}
+
 static AppData LoadData(
     IDbContextFactory<StroiHubDbContext> dbFactory,
     string legacyDataPath)
 {
     using var db = dbFactory.CreateDbContext();
     db.Database.EnsureCreated();
+    EnsureReviewsTable(db);
     var data = new AppData
     {
         Users = db.Users.AsNoTracking().ToList(),
@@ -779,7 +935,8 @@ static AppData LoadData(
         Listings = db.Listings.AsNoTracking().ToList(),
         PortfolioProjects = db.PortfolioProjects.AsNoTracking().ToList(),
         Messages = db.Messages.AsNoTracking().ToList(),
-        Favorites = db.Favorites.AsNoTracking().ToList()
+        Favorites = db.Favorites.AsNoTracking().ToList(),
+        Reviews = db.Reviews.AsNoTracking().ToList()
     };
     if (HasData(data) || !File.Exists(legacyDataPath))
         return data;
@@ -797,6 +954,23 @@ static AppData LoadData(
     if (HasData(legacyData))
         SaveData(dbFactory, legacyData);
     return legacyData;
+}
+
+static void EnsureReviewsTable(StroiHubDbContext db)
+{
+    if (db.Database.IsSqlite())
+    {
+        db.Database.ExecuteSqlRaw(
+            "CREATE TABLE IF NOT EXISTS \"Reviews\" (\"Id\" TEXT NOT NULL CONSTRAINT \"PK_Reviews\" PRIMARY KEY, \"ProjectId\" TEXT NOT NULL, \"ProfessionalId\" TEXT NOT NULL, \"ReviewerId\" TEXT NOT NULL, \"Rating\" INTEGER NOT NULL, \"Comment\" TEXT NOT NULL, \"CreatedAt\" TEXT NOT NULL)");
+        db.Database.ExecuteSqlRaw(
+            "CREATE UNIQUE INDEX IF NOT EXISTS \"IX_Reviews_ProjectId\" ON \"Reviews\" (\"ProjectId\")");
+        return;
+    }
+
+    db.Database.ExecuteSqlRaw(
+        "IF OBJECT_ID(N'[Reviews]', N'U') IS NULL CREATE TABLE [Reviews] ([Id] nvarchar(32) NOT NULL CONSTRAINT [PK_Reviews] PRIMARY KEY, [ProjectId] nvarchar(64) NOT NULL, [ProfessionalId] nvarchar(64) NOT NULL, [ReviewerId] nvarchar(64) NOT NULL, [Rating] int NOT NULL, [Comment] nvarchar(1000) NOT NULL, [CreatedAt] datetimeoffset NOT NULL)");
+    db.Database.ExecuteSqlRaw(
+        "IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Reviews_ProjectId' AND object_id = OBJECT_ID(N'[Reviews]')) CREATE UNIQUE INDEX [IX_Reviews_ProjectId] ON [Reviews] ([ProjectId])");
 }
 
 static bool EnsureProfessionalListings(AppData data)
@@ -829,6 +1003,83 @@ static bool EnsureProfessionalListings(AppData data)
 
     return changed;
 }
+
+static bool EnsureDemoProfessionals(AppData data, string contentRoot)
+{
+    var demoProfiles = new[]
+    {
+        (Name: "Иван Петров", City: "София", Region: "София-град", Service: "Боядисване", Experience: 8, Photo: "profile-12.png", Description: "Занимавам се с интериорно боядисване, подготовка на стени и фино шпакловане в София. Преди работа уточнявам обхвата, цветовете и защитата на помещенията, а накрая оставям работното място подредено."),
+        (Name: "Георги Димитров", City: "Пловдив", Region: "Пловдив", Service: "ВиК услуги", Experience: 11, Photo: "profile-13.png", Description: "Извършвам ВиК ремонти в Пловдив — смяна на смесители и сифони, монтаж на санитария и отстраняване на течове. След оглед обсъждам необходимите материали и обема на работата."),
+        (Name: "Николай Иванов", City: "Варна", Region: "Варна", Service: "Електро услуги", Experience: 7, Photo: "profile-11.png", Description: "Предлагам електро услуги във Варна, включително монтаж на осветителни тела, подмяна на контакти и диагностика на дребни неизправности. Уточнявам задачата предварително и проверявам изпълнението след монтажа."),
+        (Name: "Даниел Петров", City: "Бургас", Region: "Бургас", Service: "Ремонти", Experience: 9, Photo: "profile-05.png", Description: "Поемам малки домашни ремонти в Бургас — довършителни работи, поправки и монтажи. Уточнявам нужните материали и срок преди започване и поддържам работната зона чиста."),
+        (Name: "Александър Николов", City: "Русе", Region: "Русе", Service: "Монтажи", Experience: 6, Photo: "profile-08.png", Description: "Сглобявам мебели и монтирам шкафове, врати и кухненски модули в Русе. Работя по размерите на помещението и проверявам нивелацията, крепежите и плавното отваряне."),
+        (Name: "Мартин Георгиев", City: "Стара Загора", Region: "Стара Загора", Service: "Дограма и остъкляване", Experience: 12, Photo: "profile-03.png", Description: "Занимавам се с монтаж и обслужване на дограма в Стара Загора — регулиране на прозорци, смяна на уплътнения и дребни монтажни дейности. След оглед предлагам подходящ вариант според състоянието."),
+        (Name: "Христо Михайлов", City: "Плевен", Region: "Плевен", Service: "Почистване", Experience: 5, Photo: "profile-02.png", Description: "Предлагам почистване на жилища и помещения след ремонт в Плевен. Работя по предварително уточнен списък и обръщам внимание на праха по повърхностите и финалното почистване."),
+        (Name: "Петър Стоянов", City: "Велико Търново", Region: "Велико Търново", Service: "Строителство", Experience: 10, Photo: "profile-10.png", Description: "Изпълнявам строителни и зидарски дейности във Велико Търново за малки ремонтни проекти. Планирам работата по етапи и предварително уточнявам материалите и срока."),
+        (Name: "Димитър Колев", City: "Благоевград", Region: "Благоевград", Service: "Боядисване", Experience: 4, Photo: "profile-06.png", Description: "Извършвам боядисване и подготовка на стени в Благоевград, включително шпакловане и освежаване на интериори. Предварително обсъждам цветовете, подготовката и защитата на помещенията."),
+        (Name: "Стефан Василев", City: "Добрич", Region: "Добрич", Service: "ВиК услуги", Experience: 8, Photo: "profile-04.png", Description: "Предлагам ВиК услуги в Добрич — монтаж на санитарни аксесоари, подмяна на смесители и локални ремонти. След оглед описвам необходимите материали и съгласувам обхвата.")
+    };
+    var changed = false;
+    for (var index = 0; index < demoProfiles.Length; index++)
+    {
+        var profile = demoProfiles[index];
+        var email = $"demo-pro-{index + 1:D2}@example.invalid";
+        var user = data.Users.FirstOrDefault(candidate =>
+            candidate.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
+        if (user is null)
+        {
+            user = new User
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                Email = email,
+                Password = HashPassword(Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))),
+                Role = "professional",
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+            data.Users.Add(user);
+            changed = true;
+        }
+
+        var photoPath = Path.Combine(contentRoot, "images", "professionals", profile.Photo);
+        var profilePhoto = File.Exists(photoPath) ? "/images/professionals/" + profile.Photo : "";
+        var description = profile.Description;
+        if (user.Name != profile.Name || user.City != profile.City || user.Region != profile.Region ||
+            user.PrimaryCategory != profile.Service || user.Experience != profile.Experience ||
+            user.ProfileDescription != description || user.ProfilePhoto != profilePhoto ||
+            !user.Categories.SequenceEqual([profile.Service]) ||
+            !user.Services.SequenceEqual([profile.Service]))
+        {
+            user.Name = profile.Name;
+            user.City = profile.City;
+            user.Region = profile.Region;
+            user.PrimaryCategory = profile.Service;
+            user.Categories = [profile.Service];
+            user.Services = [profile.Service];
+            user.Experience = profile.Experience;
+            user.ProfileDescription = description;
+            user.ProfilePhoto = profilePhoto;
+            changed = true;
+        }
+
+        foreach (var listing in data.Listings.Where(listing => listing.UserId == user.Id))
+        {
+            if (listing.Service == profile.Service && listing.Title == profile.Service &&
+                listing.City == profile.City && listing.Description == description)
+                continue;
+            listing.Service = profile.Service;
+            listing.Title = profile.Service;
+            listing.City = profile.City;
+            listing.Description = description;
+            changed = true;
+        }
+    }
+
+    return changed;
+}
+
+static bool IsDemoProfessional(User user) =>
+    user.Email.StartsWith("demo-pro-", StringComparison.OrdinalIgnoreCase) &&
+    user.Email.EndsWith("@example.invalid", StringComparison.OrdinalIgnoreCase);
 
 static bool HasData(AppData data) =>
     data.Users.Count > 0 ||
@@ -965,6 +1216,7 @@ static void SaveData(IDbContextFactory<StroiHubDbContext> dbFactory, AppData dat
     db.PortfolioProjects.RemoveRange(db.PortfolioProjects.ToList());
     db.Messages.RemoveRange(db.Messages.ToList());
     db.Favorites.RemoveRange(db.Favorites.ToList());
+    db.Reviews.RemoveRange(db.Reviews.ToList());
     db.SaveChanges();
 
     db.Users.AddRange(data.Users);
@@ -973,6 +1225,7 @@ static void SaveData(IDbContextFactory<StroiHubDbContext> dbFactory, AppData dat
     db.PortfolioProjects.AddRange(data.PortfolioProjects);
     db.Messages.AddRange(data.Messages);
     db.Favorites.AddRange(data.Favorites);
+    db.Reviews.AddRange(data.Reviews);
     db.SaveChanges();
     transaction.Commit();
 }
@@ -1029,15 +1282,19 @@ record AccountUpdateRequest(string Name, string Email, string? Phone, string? Ci
 record ProjectRequest(string Name, string Phone, string Description, string? Service, string? City, string? PreferredPeriod, string? ProfessionalId);
 record FavoritesRequest(List<string> ProfessionalIds);
 record RequestStatusUpdate(string Status);
+record ReviewRequest(string ProjectId, int Rating, string Comment);
+record PublishedReview(string Author, string AuthorPhoto, int Rating, string Comment, DateTimeOffset CreatedAt, bool IsDemo);
+record DemoReviewSeed(string Author, string Photo, int Rating, string Comment, int Day);
 record PortfolioRequest(string Title, string Category, string Description);
 record ListingRequest(string Service, string City, string Description, string? Title);
 record ContactRequest(string Name, string Email, string Topic, string Message);
-class AppData { public List<User> Users { get; set; } = []; public List<Project> Projects { get; set; } = []; public List<Listing> Listings { get; set; } = []; public List<PortfolioProject> PortfolioProjects { get; set; } = []; public List<ContactMessage> Messages { get; set; } = []; public List<Favorite> Favorites { get; set; } = []; }
+class AppData { public List<User> Users { get; set; } = []; public List<Project> Projects { get; set; } = []; public List<Listing> Listings { get; set; } = []; public List<PortfolioProject> PortfolioProjects { get; set; } = []; public List<ContactMessage> Messages { get; set; } = []; public List<Favorite> Favorites { get; set; } = []; public List<Review> Reviews { get; set; } = []; }
 class User { public string Id { get; set; } = ""; public string Name { get; set; } = ""; public string Email { get; set; } = ""; public string Password { get; set; } = ""; public string Role { get; set; } = "client"; public string Phone { get; set; } = ""; public string City { get; set; } = ""; public string Region { get; set; } = ""; public string AdditionalCities { get; set; } = ""; public string PrimaryCategory { get; set; } = ""; public List<string> Categories { get; set; } = []; public List<string> Services { get; set; } = []; public string WorkPreference { get; set; } = ""; public string ProfessionalLink { get; set; } = ""; public string ProfilePhoto { get; set; } = ""; public List<string> PortfolioPhotos { get; set; } = []; public DateTimeOffset? TermsAcceptedAt { get; set; } public DateTimeOffset? PrivacyAcceptedAt { get; set; } public string ProfileDescription { get; set; } = ""; public int? Experience { get; set; } public string PasswordResetTokenHash { get; set; } = ""; public DateTimeOffset? PasswordResetExpiresAt { get; set; } public DateTimeOffset CreatedAt { get; set; } }
 class Project { public string Id { get; set; } = ""; public string UserId { get; set; } = ""; public string Name { get; set; } = ""; public string Phone { get; set; } = ""; public string Description { get; set; } = ""; public string Service { get; set; } = ""; public string City { get; set; } = ""; public string PreferredPeriod { get; set; } = ""; public string ProfessionalId { get; set; } = ""; public string Status { get; set; } = "Изпратено"; public DateTimeOffset CreatedAt { get; set; } }
 class Listing { public string Id { get; set; } = ""; public string UserId { get; set; } = ""; public string Service { get; set; } = ""; public string Title { get; set; } = ""; public string City { get; set; } = ""; public string Description { get; set; } = ""; public DateTimeOffset CreatedAt { get; set; } }
 class PortfolioProject { public string Id { get; set; } = ""; public string UserId { get; set; } = ""; public string Title { get; set; } = ""; public string Category { get; set; } = ""; public string Description { get; set; } = ""; public DateTimeOffset CreatedAt { get; set; } }
 class Favorite { public string UserId { get; set; } = ""; public string ProfessionalId { get; set; } = ""; }
+class Review { public string Id { get; set; } = ""; public string ProjectId { get; set; } = ""; public string ProfessionalId { get; set; } = ""; public string ReviewerId { get; set; } = ""; public int Rating { get; set; } public string Comment { get; set; } = ""; public DateTimeOffset CreatedAt { get; set; } }
 class ContactMessage { public string Id { get; set; } = ""; public string Name { get; set; } = ""; public string Email { get; set; } = ""; public string Topic { get; set; } = ""; public string Message { get; set; } = ""; public DateTimeOffset CreatedAt { get; set; } }
 
 class StroiHubDbContext(DbContextOptions<StroiHubDbContext> options) : DbContext(options)
@@ -1048,6 +1305,7 @@ class StroiHubDbContext(DbContextOptions<StroiHubDbContext> options) : DbContext
     public DbSet<PortfolioProject> PortfolioProjects => Set<PortfolioProject>();
     public DbSet<Favorite> Favorites => Set<Favorite>();
     public DbSet<ContactMessage> Messages => Set<ContactMessage>();
+    public DbSet<Review> Reviews => Set<Review>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -1071,6 +1329,15 @@ class StroiHubDbContext(DbContextOptions<StroiHubDbContext> options) : DbContext
         var messages = modelBuilder.Entity<ContactMessage>();
         messages.HasKey(message => message.Id);
         messages.Property(message => message.Email).HasMaxLength(254);
+
+        var reviews = modelBuilder.Entity<Review>();
+        reviews.HasKey(review => review.Id);
+        reviews.Property(review => review.Id).HasMaxLength(32);
+        reviews.Property(review => review.ProjectId).HasMaxLength(64);
+        reviews.HasIndex(review => review.ProjectId).IsUnique();
+        reviews.Property(review => review.ProfessionalId).HasMaxLength(64);
+        reviews.Property(review => review.ReviewerId).HasMaxLength(64);
+        reviews.Property(review => review.Comment).HasMaxLength(1000);
     }
 
     private static void ConfigureStringList(PropertyBuilder<List<string>> property)
@@ -1084,6 +1351,5 @@ class StroiHubDbContext(DbContextOptions<StroiHubDbContext> options) : DbContext
             value => value.ToList());
         property.HasConversion(converter);
         property.Metadata.SetValueComparer(comparer);
-        property.HasColumnType("nvarchar(max)");
     }
 }

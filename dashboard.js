@@ -342,12 +342,12 @@ function renderProfessionalCards(service = "", city = "") {
     card.className = "professional-card";
     const image = document.createElement("img");
     image.className = "professional-image";
-    image.src = serviceImages[professional.service] || serviceImages["Строителство"];
-    image.alt = professional.service;
+    image.src = professional.profilePhoto || serviceImages[professional.service] || serviceImages["Строителство"];
+    image.alt = professional.profilePhoto ? `Снимка на ${professional.name}` : professional.service;
     const content = document.createElement("div");
     content.className = "professional-card-body";
+    content.append(createTextElement("span", "service-tag", professional.service));
     content.append(
-      createTextElement("span", "service-tag", professional.service),
       createTextElement("h3", "", professional.name),
       createTextElement("p", "", professional.city),
       createTextElement("p", "professional-description", professional.description)
@@ -963,6 +963,54 @@ function initializeReviewReplies() {
   }));
 }
 
+async function initializeProfessionalReviews() {
+  const list = document.querySelector("#professional-reviews-list");
+  if (!list) return;
+  try {
+    const result = await apiRequest("/api/account/reviews", {headers:apiHeaders()});
+    const average = document.querySelector("[data-average-review]");
+    const count = document.querySelector("[data-review-count]");
+    average.textContent = result.average === null ? "—" : `${result.average.toFixed(1)} / 5`;
+    count.textContent = `${result.reviews.length} публикувани ${result.reviews.length === 1 ? "отзив" : "отзива"}`;
+    list.replaceChildren();
+    if (!result.reviews.length) {
+      list.append(createTextElement("p", "empty-copy", "Все още няма публикувани отзиви. Отзив може да се остави след приключена услуга."));
+      return;
+    }
+    result.reviews.forEach((review) => {
+      const card = document.createElement("article");
+      card.className = "review-card";
+      const heading = document.createElement("div");
+      heading.className = "review-heading";
+      const avatar = review.authorPhoto
+        ? document.createElement("img")
+        : document.createElement("span");
+      avatar.className = "review-avatar";
+      if (review.authorPhoto) {
+        avatar.src = review.authorPhoto;
+        avatar.alt = `Профилна снимка на ${review.author}`;
+      } else {
+        avatar.classList.add("review-avatar-placeholder");
+        avatar.textContent = review.author.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toLocaleUpperCase("bg-BG");
+        avatar.setAttribute("aria-label", `Профил на ${review.author}`);
+      }
+      const identity = document.createElement("div");
+      identity.className = "review-identity";
+      identity.append(
+        createTextElement("strong", "", review.author),
+        createTextElement("span", "", new Date(review.createdAt).toLocaleDateString("bg-BG"))
+      );
+      heading.append(avatar, identity);
+      const rating = createTextElement("span", "review-rating", `${"★".repeat(review.rating)}${"☆".repeat(5 - review.rating)}`);
+      rating.setAttribute("aria-label", `Оценка ${review.rating} от 5`);
+      card.append(heading, rating, createTextElement("p", "", review.comment));
+      list.append(card);
+    });
+  } catch (error) {
+    list.replaceChildren(createTextElement("p", "empty-copy", error.message));
+  }
+}
+
 const dashboardUser = getMatchingUser();
 const dashboardToken = localStorage.getItem("stroihub_token") || sessionStorage.getItem("stroihub_token");
 const storedUser = localStorage.getItem("stroihub_user") || sessionStorage.getItem("stroihub_user");
@@ -1003,6 +1051,7 @@ if (dashboardToken && parsedUser && !dashboardUser) {
       initializePortfolio();
       initializeIncomingRequests();
       initializeReviewReplies();
+      void initializeProfessionalReviews();
       updateServiceCount();
     }
   } else {

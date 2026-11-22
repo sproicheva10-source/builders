@@ -144,3 +144,11 @@
 .registration-controls .auth-page-submit:hover{background:#087eae}
 .professional-signup-card .auth-page-links{padding-top:18px;border-top:1px solid #e8eef2}
 @media(max-width:620px){.professional-signup-page .auth-page-main{width:min(100% - 16px,900px);margin:8px auto 32px}.professional-signup-card{padding:26px 18px}.professional-signup-card h1{font-size:clamp(20px,7vw,29px);overflow-wrap:anywhere}.registration-progress{grid-template-columns:1fr;gap:7px;margin:18px 0 22px}.registration-step{min-height:38px}.registration-fields,.category-checkbox-grid,.service-selection{grid-template-columns:1fr}.registration-full-width{grid-column:auto}.registration-controls .button{min-width:0;flex:1;padding:10px}.professional-signup-card .auth-page-links{justify-content:center}.professional-signup-card .auth-page-links a{text-align:center}}
+
+.skip-link{position:fixed;top:12px;left:12px;z-index:100;padding:12px 16px;transform:translateY(-160%);border-radius:8px;background:#fff;color:#12243a;box-shadow:0 6px 20px #12243a33;font-weight:800}
+.skip-link:focus{transform:translateY(0)}
+:where(a,button,input,select,textarea,[tabindex]):focus-visible{outline:3px solid #e8ad00;outline-offset:3px}
+@media(prefers-reduced-motion:reduce){
+  html:focus-within{scroll-behavior:auto}
+  *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}

@@ -8,17 +8,19 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="dashboard.css" />
-    <link rel="stylesheet" href="auth-pages.css" />
+    <link rel="stylesheet" href="dashboard.css?v=20261122-professional-portraits" />
+    <link rel="stylesheet" href="auth-pages.css?v=20261122-responsive-accessibility-2" />
+    <link rel="stylesheet" href="ui-refresh.css?v=20261122-preview-5" />
     <script src="professional-profile.js" defer></script>
   </head>
   <body data-profile-page>
+    <a class="skip-link" href="#main-content">Към основното съдържание</a>
     <header class="dashboard-header">
       <a class="brand" href="index.html" aria-label="Начална страница"><span class="brand-mark"><img src="images/logo.jpg" alt="" /></span></a>
       <nav class="header-links" aria-label="Навигация"><a href="client-dashboard.html">Клиентско табло</a><a href="index.html#services">Категории</a></nav>
-      <div class="header-user"><a class="button button-outline button-small" href="login.html">Вход</a></div>
+      <div class="header-user" id="profile-header-user"></div>
     </header>
-    <main class="dashboard-main">
+    <main class="dashboard-main" id="main-content" tabindex="-1">
       <p class="form-feedback" id="profile-feedback" role="status" aria-live="polite">Зареждане на профила…</p>
       <section class="panel profile-summary" id="professional-profile" hidden>
         <img class="profile-photo" id="profile-image" src="images/platform-overview.jpg" alt="" />
@@ -33,6 +35,37 @@
             <button class="button button-outline" type="button" id="favorite-profile">Добави в любими</button>
           </div>
         </div>
+      </section>
+      <section class="dashboard-section" id="profile-reviews" hidden>
+        <div class="section-title">
+          <div><span class="eyebrow">ОТЗИВИ</span><h2>Мнения на клиенти</h2></div>
+        </div>
+        <div class="review-summary" id="profile-reviews-summary"></div>
+        <div class="profile-reviews-list" id="profile-reviews-list"></div>
+      </section>
+      <section class="dashboard-section panel review-compose" id="review-compose" hidden>
+        <div class="section-title">
+          <div><span class="eyebrow">ТВОЯТА ОЦЕНКА</span><h2>Остави мнение</h2></div>
+        </div>
+        <form id="profile-review-form">
+          <label>Приключена услуга
+            <select name="projectId" required></select>
+          </label>
+          <label>Оценка
+            <select name="rating" required>
+              <option value="5">5 — Отлично</option>
+              <option value="4">4 — Много добре</option>
+              <option value="3">3 — Добре</option>
+              <option value="2">2 — Незадоволително</option>
+              <option value="1">1 — Лошо</option>
+            </select>
+          </label>
+          <label>Твоето мнение
+            <textarea name="comment" rows="4" minlength="10" maxlength="1000" required placeholder="Сподели впечатленията си от приключената услуга."></textarea>
+          </label>
+          <p class="form-feedback" id="profile-review-feedback" role="status" aria-live="polite"></p>
+          <button class="button button-primary" type="submit">Публикувай мнение</button>
+        </form>
       </section>
       <section class="dashboard-section" id="profile-services" hidden>
         <div class="section-title"><div><span class="eyebrow">ПРЕДЛАГАНИ УСЛУГИ</span><h2>Услуги и обслужван район</h2></div></div>
