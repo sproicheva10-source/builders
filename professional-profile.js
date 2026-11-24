@@ -236,7 +236,8 @@ async function loadProfessionalProfile() {
         Object.assign(document.createElement("span"), {className:"service-tag",textContent:listing.service}),
         Object.assign(document.createElement("h3"), {textContent:listing.title || listing.service}),
         Object.assign(document.createElement("p"), {textContent:listing.description}),
-        Object.assign(document.createElement("small"), {textContent:listing.city})
+        Object.assign(document.createElement("small"), {textContent:listing.city}),
+        Object.assign(document.createElement("strong"), {className:"service-price",textContent:listing.price || "Цена по договаряне"})
       );
       card.append(image, copy);
       profileListings.append(card);
@@ -245,7 +246,7 @@ async function loadProfessionalProfile() {
       const card = document.createElement("article");
       card.className = "portfolio-card";
       const image = document.createElement("img");
-      image.src = profileImages[project.category] || "images/platform-overview.jpg";
+      image.src = project.image || profileImages[project.category] || "images/platform-overview.jpg";
       image.alt = project.category;
       const copy = document.createElement("div");
       copy.append(

@@ -16,6 +16,13 @@ let toastTimeout;
 let professionals = [];
 let favoriteIds = [];
 let isPreviewMode = false;
+let professionalAccount = null;
+let professionalProfilePhoto = "";
+let professionalServices = [];
+let professionalPortfolio = [];
+let incomingRequestsViewed = false;
+let markingIncomingRequests = false;
+let reloadIncomingRequests = null;
 
 function readStoredValue(key, fallback) {
   const value = localStorage.getItem(`${storagePrefix}_${key}`);
@@ -42,6 +49,17 @@ function apiHeaders() {
   const token = localStorage.getItem("stroihub_token") || sessionStorage.getItem("stroihub_token");
   if (!token) throw new Error("Сесията е изтекла. Влез отново.");
   return {Authorization:`Bearer ${token}`};
+}
+
+function readDashboardImage(file) {
+  if (!file || !["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 2 * 1024 * 1024)
+    return Promise.reject(new Error("Избери JPG, PNG или WebP снимка до 2 MB."));
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => resolve(String(reader.result)));
+    reader.addEventListener("error", () => reject(new Error("Снимката не може да бъде прочетена.")));
+    reader.readAsDataURL(file);
+  });
 }
 
 async function apiRequest(url, options = {}) {
@@ -101,6 +119,13 @@ function updateUserDisplay(name) {
   if (professionalName && isProfessionalDashboard) professionalName.textContent = name;
 }
 
+function cacheProfessionalUser(user) {
+  const storage = localStorage.getItem("stroihub_token") ? localStorage : sessionStorage;
+  const cachedUser = getMatchingUser() || {};
+  const {id, name, email, role, phone, city} = user;
+  storage.setItem("stroihub_user", JSON.stringify({...cachedUser, id, name, email, role, phone, city}));
+}
+
 function initializeProfile() {
   const demoProfile = isProfessionalDashboard
     ? {name:"", city:"", phone:"", email:"", experience:"", description:""}
@@ -115,7 +140,7 @@ function initializeProfile() {
     ...(user?.city ? {city:user.city} : {}),
     ...(user?.profileDescription ? {description:user.profileDescription} : {}),
     ...(user?.experience !== undefined ? {experience:String(user.experience)} : {}),
-    ...savedProfile
+    ...((isPreviewMode || !isProfessionalDashboard) ? savedProfile : {})
   };
   updateUserDisplay(profile.name);
 
@@ -141,7 +166,7 @@ function initializeProfile() {
 
   const settingsForm = document.querySelector("#professional-settings-form");
   if (settingsForm) {
-    const savedSettings = readStoredValue("settings", {});
+    const savedSettings = isPreviewMode ? readStoredValue("settings", {}) : {};
     for (const input of settingsForm.querySelectorAll('input[type="checkbox"]')) {
       if (savedSettings[input.name] !== undefined) input.checked = savedSettings[input.name];
     }
@@ -162,11 +187,103 @@ function updateProfessionalSummary(form) {
     if (location) location.textContent = `${city}${experience ? ` · ${experience} години опит` : ""}`;
     if (summaryDescription) summaryDescription.textContent = description;
   }
+  const photo = document.querySelector("[data-profile-photo-preview]");
+  if (photo) {
+    photo.src = professionalProfilePhoto || "images/platform-overview.jpg";
+    photo.alt = name ? `Профилна снимка на ${name}` : "Профилна снимка";
+  }
+  updateProfessionalProfileProgress();
+}
+
+function updateProfessionalProfileProgress() {
+  const form = document.querySelector("#professional-profile-form");
+  if (!form) return;
+  const description = form.elements.description.value.trim();
+  const completed = [
+    Boolean(form.elements.name.value.trim()),
+    Boolean(form.elements.city.value.trim()),
+    Boolean(form.elements.phone.value.trim()),
+    Boolean(form.elements.email.value.trim()),
+    form.elements.experience.value !== "",
+    description.length >= 20,
+    Boolean(professionalProfilePhoto),
+    Boolean(professionalAccount?.primaryCategory),
+    professionalServices.length > 0,
+    professionalPortfolio.length > 0
+  ].filter(Boolean).length;
+  const percent = completed * 10;
+  const label = document.querySelector("[data-profile-progress-label]");
+  const track = document.querySelector("[data-profile-progress-track]");
+  const bar = document.querySelector("[data-profile-progress]");
+  const hint = document.querySelector("[data-profile-progress-hint]");
+  if (label) label.textContent = `${percent}%`;
+  if (bar) bar.style.width = `${percent}%`;
+  if (track) track.setAttribute("aria-valuenow", String(percent));
+  if (hint) hint.textContent = percent === 100
+    ? "Профилът ти е готов за клиенти."
+    : "Попълни основните данни, добави услуга и покажи завършена работа.";
+
+  const steps = {
+    services: professionalServices.length > 0,
+    portfolio: professionalPortfolio.length > 0,
+    description: description.length >= 20
+  };
+  document.querySelectorAll("[data-next-step]").forEach((step) => {
+    const isComplete = Boolean(steps[step.dataset.nextStep]);
+    step.classList.toggle("complete", isComplete);
+    step.setAttribute("aria-label", `${step.lastElementChild?.textContent || ""}${isComplete ? " — готово" : ""}`);
+    const marker = step.querySelector("[aria-hidden='true']");
+    if (marker) marker.textContent = isComplete ? "✓" : "○";
+  });
+}
+
+function updateProfileVisibility(isPublic) {
+  const badge = document.querySelector("[data-profile-visibility-status]");
+  if (badge) {
+    badge.textContent = isPublic ? "Публичен профил" : "Скрит профил";
+    badge.classList.toggle("profile-status-hidden", !isPublic);
+  }
+  const publicLink = document.querySelector("[data-public-profile]");
+  if (publicLink) {
+    publicLink.href = `professional-profile.html?id=${encodeURIComponent(professionalAccount?.id || "")}`;
+    publicLink.setAttribute("aria-disabled", String(!isPublic));
+    publicLink.tabIndex = isPublic ? 0 : -1;
+    publicLink.classList.toggle("is-disabled", !isPublic);
+  }
+}
+
+function initializeAccountMenu() {
+  const toggle = document.querySelector("[data-account-menu-toggle]");
+  const menu = document.querySelector("[data-account-menu]");
+  if (!toggle || !menu) return;
+  const setOpen = (open) => {
+    menu.hidden = !open;
+    toggle.setAttribute("aria-expanded", String(open));
+  };
+  toggle.addEventListener("click", () => setOpen(menu.hidden));
+  document.addEventListener("click", (event) => {
+    if (!toggle.contains(event.target) && !menu.contains(event.target)) setOpen(false);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !menu.hidden) {
+      setOpen(false);
+      toggle.focus();
+    }
+  });
+  menu.querySelectorAll("a,button").forEach((item) => item.addEventListener("click", () => setOpen(false)));
 }
 
 function initializeSectionNavigation() {
   const links = [...document.querySelectorAll(".header-links a[href^='#']")];
   const sections = links.map((link) => document.querySelector(link.hash)).filter(Boolean);
+  document.querySelectorAll('a[href="#requests"]').forEach((link) => {
+    link.addEventListener("click", () => void markIncomingRequestsViewed());
+  });
+  document.querySelectorAll("[data-unread-request-hint]").forEach((hint) => {
+    hint.addEventListener("click", () => {
+      document.querySelector("[href='#requests']")?.click();
+    });
+  });
   if (!("IntersectionObserver" in window)) return;
   const observer = new IntersectionObserver((entries) => {
     const visible = entries.filter((entry) => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
@@ -636,45 +753,97 @@ function updateServiceCount() {
 function initializeProfessionalProfile() {
   const form = document.querySelector("#professional-profile-form");
   if (!form) return;
+  const feedback = document.querySelector("#professional-profile-feedback");
+  const updateFeedback = (message, isError = false) => {
+    if (!feedback) return;
+    feedback.textContent = message;
+    feedback.classList.toggle("error", isError);
+  };
+  const populateProfileForm = (profile) => {
+    form.elements.name.value = profile.name || "";
+    form.elements.email.value = profile.email || "";
+    form.elements.city.value = profile.city || "";
+    form.elements.phone.value = profile.phone || "";
+    form.elements.experience.value = profile.experience ?? "";
+    form.elements.description.value = profile.profileDescription || "";
+    form.elements.profilePhoto.value = "";
+    professionalProfilePhoto = profile.profilePhoto || "";
+    updateProfessionalSummary(form);
+  };
+  const loadAccount = async () => {
+    const result = await apiRequest("/api/account", {headers:apiHeaders()});
+    professionalAccount = result.user;
+    populateProfileForm(professionalAccount);
+    updateUserDisplay(professionalAccount.name);
+    const settingsForm = document.querySelector("#professional-settings-form");
+    if (settingsForm) {
+      settingsForm.elements.requestNotifications.checked = professionalAccount.requestNotifications;
+      settingsForm.elements.reviewNotifications.checked = professionalAccount.reviewNotifications;
+      settingsForm.elements.isProfilePublic.checked = professionalAccount.isProfilePublic;
+    }
+    updateProfileVisibility(professionalAccount.isProfilePublic);
+    const viewCount = document.querySelector("[data-profile-view-count]");
+    if (viewCount) viewCount.textContent = String(professionalAccount.profileViews || 0);
+    cacheProfessionalUser(professionalAccount);
+  };
+
+  void loadAccount().catch((error) => updateFeedback(error.message, true));
+
+  const photoInput = form.elements.profilePhoto;
+  form.addEventListener("input", () => updateProfessionalSummary(form));
+  photoInput.addEventListener("change", async () => {
+    const file = photoInput.files?.[0];
+    if (!file) return;
+    try {
+      professionalProfilePhoto = await readDashboardImage(file);
+      updateProfessionalSummary(form);
+    } catch (error) {
+      photoInput.value = "";
+      updateFeedback(error.message, true);
+    }
+  });
+
+  form.querySelector("[data-reset-profile]")?.addEventListener("click", () => {
+    if (!professionalAccount) return;
+    populateProfileForm(professionalAccount);
+    updateFeedback("");
+  });
+
+  document.querySelector("[data-public-profile]")?.addEventListener("click", (event) => {
+    if (professionalAccount?.isProfilePublic) return;
+    event.preventDefault();
+    showToast("Профилът е скрит. Включи видимостта в настройките, за да го отвориш.");
+  });
+
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const profile = Object.fromEntries(new FormData(form).entries());
-    profile.name = String(profile.name).trim();
-    profile.email = String(profile.email).trim();
-    profile.city = String(profile.city).trim();
-    profile.phone = String(profile.phone).trim();
-    profile.description = String(profile.description).trim();
-    profile.emailVisible = form.elements.emailVisible.checked;
-    profile.phoneVisible = form.elements.phoneVisible.checked;
-    const feedback = document.querySelector("#professional-profile-feedback");
-    if (feedback) {
-      feedback.textContent = "Запазване…";
-      feedback.classList.remove("error");
-    }
+    updateFeedback("Запазване…");
+    const submit = form.querySelector('button[type="submit"]');
+    submit.disabled = true;
     try {
       const result = await apiRequest("/api/account", {
         method:"PUT",
         headers:{...apiHeaders(), "Content-Type":"application/json"},
         body:JSON.stringify({
-          name:profile.name,
-          email:profile.email,
-          phone:profile.phone,
-          city:profile.city,
-          profileDescription:profile.description,
-          experience:profile.experience ? Number(profile.experience) : null
+          name:form.elements.name.value.trim(),
+          email:form.elements.email.value.trim(),
+          phone:form.elements.phone.value.trim(),
+          city:form.elements.city.value.trim(),
+          profileDescription:form.elements.description.value.trim(),
+          experience:form.elements.experience.value ? Number(form.elements.experience.value) : null,
+          profilePhoto:professionalProfilePhoto
         })
       });
-      const storage = localStorage.getItem("stroihub_token") ? localStorage : sessionStorage;
-      storage.setItem("stroihub_user", JSON.stringify(result.user));
-      if (!writeStoredValue("profile", profile)) return;
-      updateUserDisplay(profile.name);
+      professionalAccount = {...professionalAccount, ...result.user};
+      cacheProfessionalUser(professionalAccount);
+      populateProfileForm(professionalAccount);
+      updateUserDisplay(professionalAccount.name);
       updateProfessionalSummary(form);
-      if (feedback) feedback.textContent = "Профилът е запазен.";
+      updateFeedback("Профилът е запазен.");
     } catch (error) {
-      if (feedback) {
-        feedback.textContent = error.message;
-        feedback.classList.add("error");
-      }
+      updateFeedback(error.message, true);
+    } finally {
+      submit.disabled = false;
     }
   });
 }
@@ -682,14 +851,56 @@ function initializeProfessionalProfile() {
 function initializeProfessionalSettings() {
   const form = document.querySelector("#professional-settings-form");
   if (!form) return;
-  form.addEventListener("submit", (event) => {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const settings = Object.fromEntries(
-      [...form.querySelectorAll('input[type="checkbox"]')].map((input) => [input.name, input.checked])
-    );
-    if (!writeStoredValue("settings", settings)) return;
     const feedback = document.querySelector("#professional-settings-feedback");
-    if (feedback) feedback.textContent = "Настройките са запазени в този браузър.";
+    const submit = form.querySelector('button[type="submit"]');
+    submit.disabled = true;
+    if (feedback) {
+      feedback.textContent = "Запазване…";
+      feedback.classList.remove("error");
+    }
+    try {
+      const settings = {
+        requestNotifications:form.elements.requestNotifications.checked,
+        reviewNotifications:form.elements.reviewNotifications.checked,
+        isProfilePublic:form.elements.isProfilePublic.checked
+      };
+      await apiRequest("/api/account/settings", {
+        method:"PUT",
+        headers:{...apiHeaders(), "Content-Type":"application/json"},
+        body:JSON.stringify(settings)
+      });
+      professionalAccount = {...professionalAccount, ...settings};
+      updateProfileVisibility(settings.isProfilePublic);
+      if (feedback) feedback.textContent = "Настройките са запазени.";
+    } catch (error) {
+      if (feedback) {
+        feedback.textContent = error.message;
+        feedback.classList.add("error");
+      }
+    } finally {
+      submit.disabled = false;
+    }
+  });
+}
+
+function initializeDeleteAccount() {
+  document.querySelector("[data-delete-account]")?.addEventListener("click", async (event) => {
+    if (!window.confirm("Сигурен ли си, че искаш да изтриеш профила и свързаните с него данни? Това действие е необратимо.")) return;
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+      await apiRequest("/api/account", {method:"DELETE", headers:apiHeaders()});
+      localStorage.removeItem("stroihub_token");
+      localStorage.removeItem("stroihub_user");
+      sessionStorage.removeItem("stroihub_token");
+      sessionStorage.removeItem("stroihub_user");
+      window.location.href = "index.html";
+    } catch (error) {
+      showToast(error.message);
+      button.disabled = false;
+    }
   });
 }
 
@@ -716,10 +927,37 @@ function initializeServices() {
   const list = document.querySelector("#service-list");
   const form = document.querySelector("#service-form-wrap");
   if (!list || !form) return;
+  const setEditing = (listing = null) => {
+    form.reset();
+    const category = form.elements.category;
+    category.querySelector("[data-existing-service]")?.remove();
+    if (listing && ![...category.options].some((option) => option.value === listing.service)) {
+      const option = new Option(listing.service, listing.service);
+      option.dataset.existingService = "true";
+      category.add(option, 1);
+    }
+    form.elements.listingId.value = listing?.id || "";
+    form.elements.category.value = listing?.service || "";
+    form.elements.title.value = listing?.title || "";
+    form.elements.area.value = listing?.city || "";
+    form.elements.description.value = listing?.description || "";
+    form.elements.price.value = listing?.price || "";
+    form.querySelector("h3").textContent = listing ? "Редактирай услуга" : "Добави услуга";
+    form.querySelector('[type="submit"]').textContent = listing ? "Запази промените" : "Запази услугата";
+    form.hidden = false;
+    form.scrollIntoView({behavior:"smooth", block:"center"});
+    form.elements.category.focus({preventScroll:true});
+  };
+  form.addEventListener("reset", () => {
+    form.querySelector("h3").textContent = "Добави услуга";
+    form.querySelector('[type="submit"]').textContent = "Запази услугата";
+  });
+  document.querySelector('[data-toggle-panel="service-form-wrap"]')?.addEventListener("click", () => setEditing());
   async function loadServices() {
     list.replaceChildren(createTextElement("p", "empty-copy", "Зареждане на услугите…"));
     try {
       const listings = await apiRequest("/api/account/listings", {headers:apiHeaders()});
+      professionalServices = listings;
       list.replaceChildren();
       if (!listings.length) list.append(createTextElement("p", "empty-copy", "Все още няма публикувани услуги."));
       listings.forEach((listing) => {
@@ -733,22 +971,39 @@ function initializeServices() {
           createTextElement("span", "service-tag", listing.service),
           createTextElement("h3", "", listing.title || listing.service),
           createTextElement("p", "", listing.description),
-          createTextElement("small", "", listing.city)
+          createTextElement("small", "", listing.city),
+          createTextElement("strong", "service-price", listing.price || "Цена по договаряне")
         );
+        const status = createTextElement("span", "service-tag service-published", "Публикувана");
+        copy.append(status);
+        const actions = document.createElement("div");
+        actions.className = "service-actions";
+        const edit = createTextElement("button", "text-button", "Редактирай");
+        edit.type = "button";
+        edit.dataset.editService = listing.id;
         const remove = createTextElement("button", "text-button", "Премахни");
         remove.type = "button";
         remove.dataset.removeService = listing.id;
-        card.append(image, copy, remove);
+        actions.append(edit, remove);
+        card.append(image, copy, actions);
         list.append(card);
       });
       updateServiceCount(listings.length);
+      updateProfessionalProfileProgress();
     } catch (error) {
       list.replaceChildren(createTextElement("p", "empty-copy", error.message));
     }
   }
   list.addEventListener("click", async (event) => {
+    const editButton = event.target.closest("[data-edit-service]");
+    if (editButton) {
+      const listing = professionalServices.find((item) => item.id === editButton.dataset.editService);
+      if (listing) setEditing(listing);
+      return;
+    }
     const removeButton = event.target.closest("[data-remove-service]");
     if (!removeButton) return;
+    if (!window.confirm("Сигурен ли си, че искаш да премахнеш тази услуга?")) return;
     removeButton.disabled = true;
     try {
       await apiRequest(`/api/account/listings/${encodeURIComponent(removeButton.dataset.removeService)}`, {
@@ -768,20 +1023,24 @@ function initializeServices() {
     const submit = form.querySelector('button[type="submit"]');
     submit.disabled = true;
     try {
-      await apiRequest("/api/account/listings", {
-        method:"POST",
+      const listingId = String(data.get("listingId") || "");
+      await apiRequest(listingId
+        ? `/api/account/listings/${encodeURIComponent(listingId)}`
+        : "/api/account/listings", {
+        method:listingId ? "PUT" : "POST",
         headers:{...apiHeaders(), "Content-Type":"application/json"},
         body:JSON.stringify({
           service:data.get("category"),
           title:data.get("title"),
           city:data.get("area"),
-          description:data.get("description")
+          description:data.get("description"),
+          price:data.get("price")
         })
       });
       form.reset();
       form.hidden = true;
       await loadServices();
-      showToast("Услугата е публикувана.");
+      showToast(listingId ? "Услугата е актуализирана." : "Услугата е публикувана.");
     } catch (error) {
       showToast(error.message);
     } finally {
@@ -799,13 +1058,14 @@ function initializePortfolio() {
     grid.replaceChildren(createTextElement("p", "empty-copy", "Зареждане на проектите…"));
     try {
       const projects = await apiRequest("/api/account/portfolio", {headers:apiHeaders()});
+      professionalPortfolio = projects;
       grid.replaceChildren();
       if (!projects.length) grid.append(createTextElement("p", "empty-copy", "Все още няма добавени проекти в портфолиото."));
       projects.forEach((project) => {
         const card = document.createElement("article");
         card.className = "portfolio-card";
         const image = document.createElement("img");
-        image.src = serviceImages[project.category] || serviceImages["Строителство"];
+        image.src = project.image || serviceImages[project.category] || serviceImages["Строителство"];
         image.alt = project.category;
         const copy = document.createElement("div");
         copy.append(
@@ -820,6 +1080,7 @@ function initializePortfolio() {
         card.append(image, copy, remove);
         grid.append(card);
       });
+      updateProfessionalProfileProgress();
     } catch (error) {
       grid.replaceChildren(createTextElement("p", "empty-copy", error.message));
     }
@@ -827,6 +1088,7 @@ function initializePortfolio() {
   grid.addEventListener("click", async (event) => {
     const removeButton = event.target.closest("[data-remove-portfolio]");
     if (!removeButton) return;
+    if (!window.confirm("Сигурен ли си, че искаш да премахнеш този проект от портфолиото?")) return;
     removeButton.disabled = true;
     try {
       await apiRequest(`/api/account/portfolio/${encodeURIComponent(removeButton.dataset.removePortfolio)}`, {
@@ -846,10 +1108,16 @@ function initializePortfolio() {
     const submit = form.querySelector('button[type="submit"]');
     submit.disabled = true;
     try {
+      const image = await readDashboardImage(data.get("image"));
       await apiRequest("/api/account/portfolio", {
         method:"POST",
         headers:{...apiHeaders(), "Content-Type":"application/json"},
-        body:JSON.stringify({title:data.get("title"), category:data.get("category"), description:data.get("description")})
+        body:JSON.stringify({
+          title:data.get("title"),
+          category:data.get("category"),
+          description:data.get("description"),
+          image
+        })
       });
       form.reset();
       form.hidden = true;
@@ -874,6 +1142,16 @@ function initializeIncomingRequests() {
       list.replaceChildren();
       const count = document.querySelector("[data-incoming-request-count]");
       if (count) count.textContent = String(requests.length);
+      const unreadCount = requests.filter((request) => request.isNew).length;
+      if (unreadCount > 0) incomingRequestsViewed = false;
+      document.querySelectorAll("[data-unread-request-count]").forEach((element) => { element.textContent = String(unreadCount); });
+      document.querySelectorAll("[data-unread-request-badge]").forEach((element) => {
+        element.textContent = unreadCount ? String(unreadCount) : "";
+        element.hidden = unreadCount === 0;
+      });
+      document.querySelectorAll("[data-unread-request-hint]").forEach((element) => {
+        element.textContent = unreadCount ? "Отвори запитванията, за да ги прегледаш." : "Всички запитвания са прегледани.";
+      });
       if (!requests.length) {
         list.append(createTextElement("p", "empty-copy", "Все още няма получени запитвания."));
         return;
@@ -888,10 +1166,13 @@ function initializeIncomingRequests() {
           createTextElement("span", "service-tag", request.service || "Проект"),
           createTextElement("h3", "", request.name)
         );
+        const statusLabel = request.status === "Изпратено" ? "Ново"
+          : request.status === "Прието" || request.status === "В процес на обсъждане" ? "В процес"
+            : request.status;
         const badgeClass = request.status === "Приключено" ? "status-complete"
-          : request.status === "Изпратено" ? "status-sent"
+          : request.status === "Изпратено" ? "status-new"
             : "status-progress";
-        heading.append(copy, createTextElement("span", `status ${badgeClass}`, request.status));
+        heading.append(copy, createTextElement("span", `status ${badgeClass}`, statusLabel));
         const date = new Date(request.createdAt).toLocaleDateString("bg-BG");
         const details = createTextElement("p", "", `${request.city} · ${date} · ${request.phone}`);
         const description = createTextElement("p", "request-description", request.description);
@@ -936,7 +1217,33 @@ function initializeIncomingRequests() {
       list.replaceChildren(createTextElement("p", "empty-copy", error.message));
     }
   }
+  reloadIncomingRequests = loadRequests;
   void loadRequests();
+}
+
+async function markIncomingRequestsViewed() {
+  if (incomingRequestsViewed || markingIncomingRequests || isPreviewMode) return;
+  markingIncomingRequests = true;
+  try {
+    await apiRequest("/api/account/incoming-requests/mark-viewed", {
+      method:"POST",
+      headers:apiHeaders()
+    });
+    incomingRequestsViewed = true;
+    document.querySelectorAll("[data-unread-request-count]").forEach((element) => { element.textContent = "0"; });
+    document.querySelectorAll("[data-unread-request-badge]").forEach((element) => {
+      element.textContent = "";
+      element.hidden = true;
+    });
+    document.querySelectorAll("[data-unread-request-hint]").forEach((element) => {
+      element.textContent = "Всички запитвания са прегледани.";
+    });
+    if (reloadIncomingRequests) await reloadIncomingRequests();
+  } catch (error) {
+    showToast(error.message);
+  } finally {
+    markingIncomingRequests = false;
+  }
 }
 
 function initializeReviewReplies() {
@@ -1046,12 +1353,15 @@ if (dashboardToken && parsedUser && !dashboardUser) {
     if (!isPreviewMode) {
       initializeProfessionalProfile();
       initializeProfessionalSettings();
+      initializeAccountMenu();
+      initializeDeleteAccount();
       initializePanelToggles();
       initializeServices();
       initializePortfolio();
       initializeIncomingRequests();
       initializeReviewReplies();
       void initializeProfessionalReviews();
+      if (window.location.hash === "#requests") void markIncomingRequestsViewed();
       updateServiceCount();
     }
   } else {

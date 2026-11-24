@@ -373,6 +373,15 @@ if (authForm) {
         return;
       }
       showAuthStatus(form, result.message || "Готово.");
+      if (mode === "forgot-password" && result.resetLink) {
+        const status = form.querySelector(".auth-page-status");
+        const resetLink = document.createElement("a");
+        resetLink.href = result.resetLink;
+        resetLink.target = "_blank";
+        resetLink.rel = "noopener noreferrer";
+        resetLink.textContent = "Отвори връзката за смяна на парола";
+        status.append(document.createElement("br"), resetLink);
+      }
       if (mode === "reset-password") {
         form.reset();
         form.querySelectorAll("input").forEach((input) => { input.disabled = true; });

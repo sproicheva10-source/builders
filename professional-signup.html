@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="dashboard.css?v=20261122-professional-portraits" />
-    <link rel="stylesheet" href="auth-pages.css?v=20261122-responsive-accessibility-2" />
+    <link rel="stylesheet" href="auth-pages.css?v=20261124-preference-radio-focus" />
     <link rel="stylesheet" href="ui-refresh.css?v=20261122-preview-5" />
     <script src="auth-pages.js?v=20261118-password-email-validation" defer></script>
     <script src="location-select.js?v=20261118-region-cities-v2" defer></script>
@@ -53,6 +53,10 @@
               <div class="category-checkbox-grid" id="registration-categories"></div>
               <div class="registration-validation" id="category-error" aria-live="polite"></div>
             </fieldset>
+            <div class="service-selection-heading">
+              <strong>Конкретни услуги <span class="required-mark">*</span></strong>
+              <span id="service-selection-summary">Първо избери поне една категория.</span>
+            </div>
             <div class="service-selection" id="registration-services"></div>
             <div class="registration-validation" id="service-error" aria-live="polite"></div>
             <div class="registration-fields">
@@ -108,8 +112,8 @@
             </div>
             <div class="registration-validation" id="image-error" role="status" aria-live="polite"></div>
             <div class="registration-choice-group registration-consents">
-              <label class="checkbox-row"><input required type="checkbox" name="termsAccepted" /> <span>Приемам Общите условия <span class="required-mark">*</span></span></label>
-              <label class="checkbox-row"><input required type="checkbox" name="privacyAccepted" /> <span>Запознах се с Политиката за поверителност <span class="required-mark">*</span></span></label>
+              <label class="checkbox-row"><input required type="checkbox" name="termsAccepted" /> <span>Приемам <a href="terms.html" target="_blank" rel="noopener noreferrer">Общите условия</a> <span class="required-mark">*</span></span></label>
+              <label class="checkbox-row"><input required type="checkbox" name="privacyAccepted" /> <span>Запознах се с <a href="privacy.html" target="_blank" rel="noopener noreferrer">Политиката за поверителност</a> <span class="required-mark">*</span></span></label>
             </div>
           </section>
 

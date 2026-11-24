@@ -10,6 +10,7 @@
 .auth-page-form{display:grid;gap:14px}
 .auth-page-form label{display:grid;gap:6px;color:#435970;font-size:12px;font-weight:700}
 .required-mark{color:#f9c928}
+.registration-choice-group legend .required-mark{display:inline!important;margin:0 0 0 2px;color:#f9c928}
 .auth-page-form input{width:100%;min-height:44px;padding:10px 12px;border:1px solid #d5e0e8;border-radius:8px;background:#fff;color:#12243a;font:inherit}
 .auth-page-form select{width:100%;min-height:44px;padding:10px 12px;border:1px solid #d5e0e8;border-radius:8px;background:#fff;color:#12243a;font:inherit}
 .phone-input-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:8px}
@@ -131,13 +132,26 @@
 .registration-choice-group legend span{display:block;margin-top:4px;color:#788898;font-size:11px;font-weight:400}
 .category-checkbox-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
 .category-option{display:grid!important;grid-template-columns:18px 1fr auto;align-items:center;gap:8px!important;min-height:46px;padding:9px 10px;border:1px solid #dce7ed;border-radius:9px;background:#fbfdfe;color:#354b5f!important;font-size:12px!important}
+.category-option.selected,.category-option.primary{border-color:#0786c7;background:#fbfdfe;box-shadow:none}
+.category-option:hover{border-color:#dce7ed;background:#fbfdfe}
+.category-option.selected:hover,.category-option.primary:hover,.category-option:focus-within,.category-option:focus-within:hover{border-color:#0786c7;background:#fbfdfe}
+.category-option:focus-within{outline:0!important;box-shadow:none!important}
+.professional-registration-form .category-option>input:focus{outline:0!important;box-shadow:none!important}
+.professional-registration-form .service-option input:focus,.professional-registration-form .primary-category-label input:focus,.professional-registration-form .registration-inline-options input:focus{outline:0!important;box-shadow:none!important}
 .category-option>input:first-child,.choice-option input,.registration-inline-options input{width:16px;height:16px;margin:0;accent-color:#0786c7}
 .primary-category-label{display:flex;align-items:center;gap:4px;color:#748493;font-size:10px;font-weight:500}
 .primary-category-label input{width:14px;height:14px;margin:0;accent-color:#0786c7}
+.primary-category-label:has(input:checked){color:#076f9f;font-weight:700}
+.service-selection-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:18px 0 10px;color:#10243a;font-size:13px}
+.service-selection-heading>span{color:#788898;font-size:12px;font-weight:500;text-align:right}
 .service-selection{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:14px 0}
 .service-category{padding:12px;border:1px solid #e0e9ef;border-radius:10px;background:#f9fcfe}
 .service-category legend{padding:0 5px;color:#10243a}
+.service-selection-empty{grid-column:1/-1;margin:0;padding:14px;border:1px dashed #d8e4ea;border-radius:10px;background:#fbfdfe;color:#788898;text-align:center;font-size:12px}
 .choice-option{display:flex!important;align-items:center;gap:8px!important;margin:8px 0;color:#435970!important;font-size:12px!important;font-weight:500!important}
+.service-option{min-height:38px;margin:7px 0 0;padding:8px 9px;border:1px solid #e3eaef;border-radius:8px;background:#fff!important;cursor:pointer}
+.service-option.selected{border-color:#0786c7;background:#f1faff!important;color:#14577a!important}
+.service-option:focus-within{border-color:#0786c7}
 .registration-inline-options{display:flex;flex-wrap:wrap;gap:18px}
 .registration-validation{min-height:0;margin-top:5px;color:#ad3544;font-size:12px}
 .registration-consents{display:grid;gap:10px;margin-top:16px}
@@ -148,7 +162,7 @@
 .registration-controls .auth-page-submit{margin-left:auto;background:#1596c7;box-shadow:0 6px 14px #1596c724}
 .registration-controls .auth-page-submit:hover{background:#087eae}
 .professional-signup-card .auth-page-links{padding-top:18px;border-top:1px solid #e8eef2}
-@media(max-width:620px){.professional-signup-page .auth-page-main{width:min(100% - 16px,900px);margin:8px auto 32px}.professional-signup-card{padding:26px 18px}.professional-signup-card h1{font-size:clamp(20px,7vw,29px);overflow-wrap:anywhere}.registration-progress{grid-template-columns:1fr;gap:7px;margin:18px 0 22px}.registration-step{min-height:38px}.registration-fields,.category-checkbox-grid,.service-selection{grid-template-columns:1fr}.registration-full-width{grid-column:auto}.registration-controls .button{min-width:0;flex:1;padding:10px}.professional-signup-card .auth-page-links{justify-content:center}.professional-signup-card .auth-page-links a{text-align:center}}
+@media(max-width:620px){.professional-signup-page .auth-page-main{width:min(100% - 16px,900px);margin:8px auto 32px}.professional-signup-card{padding:26px 18px}.professional-signup-card h1{font-size:clamp(20px,7vw,29px);overflow-wrap:anywhere}.registration-progress{grid-template-columns:1fr;gap:7px;margin:18px 0 22px}.registration-step{min-height:38px}.registration-fields,.category-checkbox-grid,.service-selection{grid-template-columns:1fr}.service-selection-heading{align-items:flex-start;flex-direction:column;gap:4px}.service-selection-heading>span{text-align:left}.registration-full-width{grid-column:auto}.registration-controls .button{min-width:0;flex:1;padding:10px}.professional-signup-card .auth-page-links{justify-content:center}.professional-signup-card .auth-page-links a{text-align:center}}
 
 .skip-link{position:fixed;top:12px;left:12px;z-index:100;padding:12px 16px;transform:translateY(-160%);border-radius:8px;background:#fff;color:#12243a;box-shadow:0 6px 20px #12243a33;font-weight:800}
 .skip-link:focus{transform:translateY(0)}
