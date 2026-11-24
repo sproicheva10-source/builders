@@ -33,20 +33,20 @@
         <form class="auth-page-form professional-registration-form client-registration-form" data-auth-form="register" data-role="client" novalidate>
           <section class="registration-panel" data-step-panel="0" aria-labelledby="personal-heading">
             <h2 id="personal-heading">Лични данни</h2>
-            <p class="registration-help">Полетата със * са задължителни.</p>
+            <p class="registration-help">Полетата със <span class="required-mark">*</span> са задължителни.</p>
             <div class="registration-fields">
-              <label>Собствено име *<input required name="firstName" minlength="1" maxlength="50" autocomplete="given-name" /></label>
-              <label>Фамилия *<input required name="lastName" minlength="1" maxlength="50" autocomplete="family-name" /></label>
-              <label>Имейл адрес *<input required type="email" name="email" maxlength="254" autocomplete="email" placeholder="name@example.com" /></label>
-              <label>Телефонен номер *<input required type="tel" name="phone" value="+" maxlength="20" pattern="\+[0-9]{10,12}" title="Използвай +, международен код и точно 9 цифри след него." inputmode="tel" autocomplete="tel" /><span class="registration-help">Формат: + код на държавата и 9 цифри · например +44 123456789</span></label>
+              <label><span>Собствено име <span class="required-mark">*</span></span><input required name="firstName" minlength="1" maxlength="50" autocomplete="given-name" /></label>
+              <label><span>Фамилия <span class="required-mark">*</span></span><input required name="lastName" minlength="1" maxlength="50" autocomplete="family-name" /></label>
+              <label><span>Имейл адрес <span class="required-mark">*</span></span><input required type="email" name="email" maxlength="254" autocomplete="email" placeholder="name@example.com" /></label>
+              <label><span>Телефонен номер <span class="required-mark">*</span></span><span class="phone-input-row"><input class="country-code-search" list="country-codes" name="phoneCountryCode" value="+359" autocomplete="off" placeholder="Търси държава или код" aria-label="Търси код на държавата" /><datalist id="country-codes"></datalist><input required type="tel" name="phoneNumber" maxlength="16" pattern="[0-9\s]{7,16}" title="Въведи телефонен номер без код на държавата." inputmode="tel" autocomplete="tel-national" placeholder="888 123 456" /></span><input type="hidden" name="phone" /><span class="registration-help">Избери държава или код и въведи номера си.</span></label>
             </div>
           </section>
 
           <section class="registration-panel" data-step-panel="1" aria-labelledby="location-heading" hidden>
             <h2 id="location-heading">Местоположение и достъп</h2>
-            <p class="registration-help">Полетата със * са задължителни.</p>
+            <p class="registration-help">Полетата със <span class="required-mark">*</span> са задължителни.</p>
             <div class="registration-fields">
-              <label class="location-dropdown-field">Област *<select required name="region" id="registration-region">
+              <label class="location-dropdown-field"><span>Област <span class="required-mark">*</span></span><select required name="region" id="registration-region">
                 <option value="">Избери област</option>
                 <option>Благоевград</option><option>Бургас</option><option>Варна</option><option>Велико Търново</option>
                 <option>Видин</option><option>Враца</option><option>Габрово</option><option>Добрич</option>
@@ -56,11 +56,11 @@
                 <option>Смолян</option><option>София-град</option><option>София-област</option><option>Стара Загора</option>
                 <option>Търговище</option><option>Хасково</option><option>Шумен</option><option>Ямбол</option>
               </select></label>
-              <label class="location-dropdown-field">Населено място *<select required name="city" id="registration-city" autocomplete="address-level2" disabled>
+              <label class="location-dropdown-field"><span>Населено място <span class="required-mark">*</span></span><select required name="city" id="registration-city" autocomplete="address-level2" disabled>
                 <option value="">Избери област първо</option>
               </select><span class="registration-help" id="registration-city-status" role="status">Избери област, за да видиш градовете.</span></label>
-              <label>Парола *<input required type="password" name="password" minlength="8" maxlength="128" autocomplete="new-password" /><span class="registration-help">8–128 символа, главна и малка буква и поне една цифра.</span></label>
-              <label>Повтори паролата *<input required type="password" name="confirmPassword" minlength="8" maxlength="128" autocomplete="new-password" /></label>
+              <label><span>Парола <span class="required-mark">*</span></span><input required type="password" name="password" minlength="8" autocomplete="new-password" /><span class="registration-help">Поне 8 символа, главна и малка буква, цифра и специален символ.</span></label>
+              <label><span>Повтори паролата <span class="required-mark">*</span></span><input required type="password" name="confirmPassword" minlength="8" autocomplete="new-password" /></label>
               <label class="registration-full-width">Профилна снимка
                 <input type="file" name="profilePhoto" accept="image/jpeg,image/png,image/webp" />
                 <span class="registration-help">Незадължително · JPG, PNG или WebP · до 2 MB</span>
@@ -68,8 +68,8 @@
             </div>
             <div class="registration-validation" id="image-error" role="status" aria-live="polite"></div>
             <div class="registration-choice-group registration-consents">
-              <label class="checkbox-row"><input required type="checkbox" name="termsAccepted" /> Приемам Общите условия *</label>
-              <label class="checkbox-row"><input required type="checkbox" name="privacyAccepted" /> Запознат/а съм с Политиката за поверителност *</label>
+              <label class="checkbox-row"><input required type="checkbox" name="termsAccepted" /> <span>Приемам Общите условия <span class="required-mark">*</span></span></label>
+              <label class="checkbox-row"><input required type="checkbox" name="privacyAccepted" /> <span>Запознат/а съм с Политиката за поверителност <span class="required-mark">*</span></span></label>
             </div>
           </section>
 

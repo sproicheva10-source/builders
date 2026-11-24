@@ -9,7 +9,10 @@
 .auth-page-card>p{margin:0 0 23px;color:#65768a}
 .auth-page-form{display:grid;gap:14px}
 .auth-page-form label{display:grid;gap:6px;color:#435970;font-size:12px;font-weight:700}
+.required-mark{color:#f9c928}
 .auth-page-form input{width:100%;min-height:44px;padding:10px 12px;border:1px solid #d5e0e8;border-radius:8px;background:#fff;color:#12243a;font:inherit}
+.auth-page-form select{width:100%;min-height:44px;padding:10px 12px;border:1px solid #d5e0e8;border-radius:8px;background:#fff;color:#12243a;font:inherit}
+.phone-input-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:8px}
 .auth-page-form input:focus{border-color:#0786c7;outline:3px solid #0786c722}
 .auth-page-form .checkbox-row{display:flex;grid-template-columns:auto 1fr;align-items:flex-start;gap:9px;font-weight:500;line-height:1.55}
 .auth-page-form .checkbox-row input{flex:0 0 17px;width:17px;min-height:17px;height:17px;margin:2px 0;accent-color:#0786c7}
@@ -79,6 +82,7 @@
 .professional-signup-card{position:relative;width:100%;overflow:hidden;border-color:#e1eaf0;border-radius:22px;box-shadow:0 24px 70px #173a501a}
 .professional-signup-card:before{position:absolute;top:0;left:0;width:100%;height:5px;background:linear-gradient(90deg,#f9c928,#f5a623,#0786c7);content:""}
 .professional-signup-card>p{margin-bottom:22px}
+.professional-signup-card>h1,.professional-signup-card>p{text-align:center}
 .registration-progress{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:22px 0 26px}
 .client-registration-progress{grid-template-columns:repeat(2,minmax(0,1fr))}
 .registration-step{display:flex;align-items:center;gap:9px;min-height:44px;padding:8px 10px;border:1px solid #dfe8ee;border-radius:9px;background:#f8fbfd;color:#718193;text-align:left;font:600 12px "DM Sans",sans-serif}
@@ -91,6 +95,7 @@
 .registration-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
 .professional-registration-form label:not(.checkbox-row):not(.choice-option):not(.category-option){gap:7px;font-size:13px}
 .professional-registration-form input:not([type=checkbox]):not([type=radio]),.professional-registration-form select,.professional-registration-form textarea{width:100%;min-height:46px;padding:10px 12px;border:1px solid #d5e0e8;border-radius:9px;background:#fff;color:#12243a;font:500 14px "DM Sans",sans-serif}
+.professional-registration-form .registration-fields>label{align-content:start}
 .professional-registration-form [data-step-panel="2"] .registration-fields>label:not(.registration-full-width){align-content:start}
 #registration-city-status{margin:0}
 .location-dropdown-field{gap:9px!important;color:#294962!important;font-size:13px!important;font-weight:700!important}

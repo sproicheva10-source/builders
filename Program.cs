@@ -51,7 +51,7 @@ app.MapPost("/api/auth/register", (RegisterRequest request) =>
     if (!IsValidEmail(request.Email))
         return Results.BadRequest(new { message = "Въведи валиден имейл адрес с домейн, например name@example.com." });
     if (request.Password is null || !IsValidPassword(request.Password))
-        return Results.BadRequest(new { message = "Паролата трябва да е 8–128 символа и да съдържа главна и малка буква и поне една цифра." });
+        return Results.BadRequest(new { message = "Паролата трябва да съдържа поне 8 символа, главна и малка буква, цифра и специален символ." });
 
     if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Trim().Length > 100 ||
         string.IsNullOrWhiteSpace(request.Phone) || request.Phone.Trim().Length > 40 ||
@@ -326,7 +326,7 @@ app.MapPost("/api/auth/reset-password", (PasswordResetCompletionRequest request)
     if (string.IsNullOrWhiteSpace(request.Token))
         return Results.BadRequest(new { message = "Линкът е невалиден или е изтекъл. Поискай нов." });
     if (request.Password is null || !IsValidPassword(request.Password))
-        return Results.BadRequest(new { message = "Паролата трябва да е 8–128 символа и да съдържа главна и малка буква и поне една цифра." });
+        return Results.BadRequest(new { message = "Паролата трябва да съдържа поне 8 символа, главна и малка буква, цифра и специален символ." });
 
     var tokenHash = HashResetToken(request.Token);
     lock (dataLock)
@@ -1141,10 +1141,11 @@ static bool IsValidEmail(string? email)
 }
 
 static bool IsValidPassword(string? password) =>
-    password is { Length: >= 8 and <= 128 } &&
+    password is { Length: >= 8 } &&
     password.Any(char.IsUpper) &&
     password.Any(char.IsLower) &&
-    password.Any(char.IsDigit);
+    password.Any(char.IsDigit) &&
+    password.Any(character => !char.IsLetterOrDigit(character));
 
 static string NormalizePhone(string? phone) =>
     System.Text.RegularExpressions.Regex.Replace(phone?.Trim() ?? "", @"[\s().-]", "");
