@@ -38,6 +38,7 @@ const accountSettingsForm = document.querySelector("#account-settings-form");
 const accountSettingsStatus = document.querySelector("#account-settings-status");
 const accountProjectForm = document.querySelector("#account-project-form");
 const accountProjectStatus = document.querySelector("#account-project-status");
+const accountProjectCalendar = createAvailabilityCalendar(accountProjectForm);
 const accountListingForm = document.querySelector("#account-listing-form");
 const accountListingStatus = document.querySelector("#account-listing-status");
 const accountPrivacyStatus = document.querySelector("#account-privacy-status");
@@ -92,7 +93,7 @@ const serviceOptions = [...serviceFilter.options].filter((option) => option.valu
   button.setAttribute("aria-selected", "false");
   button.tabIndex = -1;
   button.dataset.serviceValue = option.value;
-  button.innerHTML = `<span class="service-option-icon" aria-hidden="true"><img src="${details.image}" alt="" /></span><span class="service-option-copy"><strong></strong><small>${details.description}</small></span>`;
+  button.innerHTML = `<span class="service-option-icon" aria-hidden="true">${getServiceIconMarkup(option.value)}</span><span class="service-option-copy"><strong></strong><small>${details.description}</small></span>`;
   button.querySelector("strong").textContent = option.textContent;
   servicePickerOptions.append(button);
   return button;
@@ -437,6 +438,12 @@ function showToast(message) {
   window.setTimeout(() => toast.classList.remove("show"), 3200);
 }
 
+function getDashboardPath(role) {
+  if (role === "admin") return "admin-dashboard.html";
+  if (role === "professional" || role === "company") return "professional-dashboard.html";
+  return "client-dashboard.html";
+}
+
 function showAccountDashboard() {
   const user = getAuthUser();
   if (!user || typeof user.name !== "string" || typeof user.email !== "string") {
@@ -444,11 +451,19 @@ function showAccountDashboard() {
   }
 
   const role = user.role || "client";
-  const roleLabels = {client:"Клиент", professional:"Майстор", company:"Фирма"};
+  const roleLabels = {admin:"Администратор", client:"Клиент", professional:"Майстор", company:"Фирма"};
   const initials = user.name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toLocaleUpperCase("bg");
 
   accountTitle.textContent = `Здравей, ${user.name.trim().split(/\s+/)[0]}!`;
-  accountAvatar.textContent = initials;
+  if (user.profilePhoto) {
+    const image = document.createElement("img");
+    image.className = "account-avatar-photo";
+    image.src = user.profilePhoto;
+    image.alt = "";
+    accountAvatar.replaceChildren(image);
+  } else {
+    accountAvatar.textContent = initials;
+  }
   accountName.textContent = user.name;
   accountEmail.textContent = user.email;
   accountRole.textContent = roleLabels[role] || "Потребител";
@@ -478,9 +493,65 @@ function showAccountDashboard() {
   accountProjectForm.hidden = isProfessional;
   accountListingForm.hidden = !isProfessional;
   populateListingOptions();
+  if (!isProfessional) {
+    accountProjectForm.elements.name.value = user.name;
+    accountProjectForm.elements.phone.value = user.phone || "";
+    void populateProjectProfessionals();
+  }
   openAccountView("profile");
   accountOverlay.hidden = false;
 }
+
+async function populateProjectProfessionals() {
+  const select = accountProjectForm.elements.professionalId;
+  const status = accountProjectStatus;
+  select.replaceChildren(new Option("Зареждане на майсторите…", ""));
+  select.disabled = true;
+  try {
+    const response = await fetch("/api/professionals");
+    const result = await response.json().catch(() => []);
+    if (!response.ok) throw new Error(result.message || "Майсторите не бяха заредени.");
+    select.replaceChildren(new Option("Избери майстор", ""));
+    result.forEach((professional) => {
+      const option = new Option(`${professional.name} · ${professional.service}, ${professional.city}`, professional.id);
+      option.dataset.service = professional.service;
+      option.dataset.city = professional.city;
+      select.add(option);
+    });
+    select.disabled = result.length === 0;
+    if (!result.length) {
+      select.replaceChildren(new Option("Няма публикувани майстори", ""));
+      status.textContent = "Все още няма публикувани майстори, до които да изпратиш заявка.";
+      status.classList.add("error");
+    }
+  } catch (error) {
+    select.replaceChildren(new Option("Майсторите не бяха заредени", ""));
+    status.textContent = error.message;
+    status.classList.add("error");
+  }
+}
+
+let projectAvailabilityRequest = 0;
+accountProjectForm.elements.professionalId.addEventListener("change", async (event) => {
+  const professionalId = event.currentTarget.value;
+  const requestId = ++projectAvailabilityRequest;
+  accountProjectCalendar.clear(professionalId ? "Зареждане на свободните дати…" : undefined);
+  if (!professionalId) return;
+  accountProjectStatus.textContent = "";
+  accountProjectStatus.classList.remove("error");
+  try {
+    const response = await fetch(`/api/professionals/${encodeURIComponent(professionalId)}`);
+    const profile = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(profile.message || "Графикът на майстора не беше зареден.");
+    if (requestId !== projectAvailabilityRequest) return;
+    accountProjectCalendar.setUnavailableDates(profile.busyDates);
+  } catch (error) {
+    if (requestId !== projectAvailabilityRequest) return;
+    accountProjectCalendar.clear(error.message);
+    accountProjectStatus.textContent = error.message;
+    accountProjectStatus.classList.add("error");
+  }
+});
 
 function populateListingOptions() {
   const serviceSelect = accountListingForm.elements.service;
@@ -539,7 +610,7 @@ async function loadAccountWork() {
       const card = document.createElement("article");
       card.className = "account-record-card";
       const title = document.createElement("strong");
-      title.textContent = isProfessional ? `${item.service} · ${item.city}` : item.name;
+      title.textContent = isProfessional ? `${item.service} · ${item.city}` : `${item.professionalName || "Майстор"} · ${item.status || "Изпратено"}`;
       const description = document.createElement("p");
       description.textContent = item.description;
       const date = document.createElement("small");
@@ -607,12 +678,17 @@ function updateHeaderUser() {
   const login = document.createElement("button");
   login.type = "button";
   login.className = "auth-button login-button";
-  login.textContent = "Моят профил";
+  if (user.profilePhoto) {
+    const image = document.createElement("img");
+    image.className = "auth-profile-photo";
+    image.src = user.profilePhoto;
+    image.alt = "";
+    login.append(image);
+  }
+  login.append(document.createTextNode("Моят профил"));
   login.setAttribute("aria-label", `Моят профил: ${user.name}`);
   login.addEventListener("click", () => {
-    window.location.href = user.role === "professional" || user.role === "company"
-      ? "professional-dashboard.html"
-      : "client-dashboard.html";
+    window.location.href = getDashboardPath(user.role);
   });
   const register = document.createElement("button");
   register.type = "button";
@@ -787,6 +863,13 @@ accountSettingsForm.addEventListener("submit", async (event) => {
     document.querySelector("#account-profile-phone").textContent = result.user.phone || "Не е посочен";
     document.querySelector("#account-profile-city").textContent = result.user.city || "Не е посочено";
     accountSettingsStatus.textContent = "Промените са запазени.";
+    if (result.user.profilePhoto) {
+      const image = document.createElement("img");
+      image.className = "account-avatar-photo";
+      image.src = result.user.profilePhoto;
+      image.alt = "";
+      accountAvatar.replaceChildren(image);
+    }
     updateHeaderUser();
   } catch (error) {
     accountSettingsStatus.textContent = error.message;
@@ -796,19 +879,33 @@ accountSettingsForm.addEventListener("submit", async (event) => {
 
 accountProjectForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+  const data = new FormData(accountProjectForm);
+  if (!data.get("preferredPeriod")) {
+    accountProjectStatus.textContent = "Избери начало и край на свободен период от календара.";
+    accountProjectStatus.classList.add("error");
+    return;
+  }
   accountProjectStatus.textContent = "Изпращане...";
   accountProjectStatus.classList.remove("error");
-  const data = new FormData(accountProjectForm);
   try {
     const response = await fetch("/api/projects", {
       method:"POST",
       headers:{...accountAuthHeaders(), "Content-Type":"application/json"},
-      body:JSON.stringify({name:data.get("name"), phone:data.get("phone"), description:data.get("description")})
+      body:JSON.stringify({
+        name:data.get("name"),
+        phone:data.get("phone"),
+        description:data.get("description"),
+        professionalId:data.get("professionalId"),
+        service:accountProjectForm.elements.professionalId.selectedOptions[0]?.dataset.service,
+        city:accountProjectForm.elements.professionalId.selectedOptions[0]?.dataset.city,
+        preferredPeriod:data.get("preferredPeriod")
+      })
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.message || "Заявката не беше изпратена.");
     accountProjectForm.reset();
-    accountProjectStatus.textContent = result.message;
+    accountProjectCalendar.clear();
+    accountProjectStatus.textContent = "Заявката е изпратена успешно.";
     await loadAccountWork();
   } catch (error) {
     accountProjectStatus.textContent = error.message;
@@ -859,9 +956,7 @@ authForm.addEventListener("submit", async (event) => {
     }
     storeAuthSession(result.token, result.user, authMode === "register" || authForm.elements.remember.checked);
     authOverlay.hidden = true;
-    window.location.href = result.user.role === "professional" || result.user.role === "company"
-      ? "professional-dashboard.html"
-      : "client-dashboard.html";
+    window.location.href = getDashboardPath(result.user.role);
   } catch (error) {
     authMessage.textContent = error.message;
     authMessage.classList.add("error");

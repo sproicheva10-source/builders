@@ -8,8 +8,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css?v=20261122-responsive-accessibility-3" />
-    <link rel="stylesheet" href="ui-refresh.css?v=20261122-preview-5" />
+    <link rel="stylesheet" href="styles.css?v=20261125-availability-calendar" />
+    <link rel="stylesheet" href="ui-refresh.css?v=20261125-responsive-v2" />
+    <link rel="stylesheet" href="availability-calendar.css?v=20261125-availability-period" />
   </head>
   <body id="top">
     <a class="skip-link" href="#main-content">Към основното съдържание</a>
@@ -37,7 +38,7 @@
       <section class="hero" id="home">
         <div class="hero-copy">
           <h1>Всичко за твоя ремонт на едно място</h1>
-          <p class="hero-subtitle">Открий специалист според услугата и населеното място.</p>
+          <p class="hero-subtitle">Открий специалист според услугата и населеното място. Сравни профили и избери подходящия за теб.</p>
           <form class="search-panel hero-search-panel" id="search-form">
             <div class="service-picker-field" id="service-picker">
               <span class="service-picker-label" id="service-picker-label">Каква услуга търсиш?</span>
@@ -365,14 +366,14 @@
           <div><h2>Каква услуга търсиш?</h2><p class="section-lead">Избери категория и открий специалисти за своя ремонт или строителен проект.</p></div>
         </div>
         <div class="category-grid">
-          <button class="category-card" data-category="ВиК услуги"><span class="category-icon" aria-hidden="true"><img src="images/plumbing_services.jpg" alt="" /></span><b>ВиК услуги</b><ul class="category-list"><li>Смяна на тръби</li><li>Монтаж на санитария</li><li>Отпушване на канали</li></ul></button>
-          <button class="category-card" data-category="Електро услуги"><span class="category-icon" aria-hidden="true"><img src="images/electrical_services.jpg" alt="" /></span><b>Електроуслуги</b><ul class="category-list"><li>Ремонт на електроинсталации</li><li>Монтаж на осветление</li><li>Смяна на контакти</li></ul></button>
-          <button class="category-card" data-category="Боядисване"><span class="category-icon" aria-hidden="true"><img src="images/painting.jpg" alt="" /></span><b>Боядисване</b><ul class="category-list"><li>Боядисване на стени</li><li>Шпакловка</li><li>Декоративни мазилки</li></ul></button>
-          <button class="category-card" data-category="Строителство"><span class="category-icon" aria-hidden="true"><img src="images/construction.jpg" alt="" /></span><b>Строителство</b><ul class="category-list"><li>Зидария</li><li>Изливане на бетон</li><li>Изграждане на основи</li></ul></button>
-          <button class="category-card" data-category="Ремонти"><span class="category-icon" aria-hidden="true"><img src="images/repairs.jpg" alt="" /></span><b>Ремонти</b><ul class="category-list"><li>Лепене на плочки</li><li>Поставяне на ламинат</li><li>Монтаж на гипсокартон</li></ul></button>
-          <button class="category-card" data-category="Монтажи"><span class="category-icon" aria-hidden="true"><img src="images/montage.jpg" alt="" /></span><b>Монтажи</b><ul class="category-list"><li>Сглобяване на мебели</li><li>Монтаж на врати</li><li>Монтаж на кухни</li></ul></button>
-          <button class="category-card" data-category="Дограма и остъкляване"><span class="category-icon" aria-hidden="true"><img src="images/glazing.jpg" alt="" /></span><b>Дограма и остъкляване</b><ul class="category-list"><li>Монтаж на PVC дограма</li><li>Остъкляване на тераси</li><li>Монтаж на комарници</li></ul></button>
-          <button class="category-card" data-category="Почистване"><span class="category-icon" aria-hidden="true"><img src="images/cleaning.jpg" alt="" /></span><b>Почистване</b><ul class="category-list"><li>Почистване след ремонт</li><li>Основно почистване</li><li>Почистване на прозорци</li></ul></button>
+          <button class="category-card" data-category="ВиК услуги"><span class="category-icon" data-service-icon="ВиК услуги" aria-hidden="true"></span><b>ВиК услуги</b><ul class="category-list"><li>Смяна на тръби</li><li>Монтаж на санитария</li><li>Отпушване на канали</li></ul></button>
+          <button class="category-card" data-category="Електро услуги"><span class="category-icon" data-service-icon="Електро услуги" aria-hidden="true"></span><b>Електроуслуги</b><ul class="category-list"><li>Ремонт на електроинсталации</li><li>Монтаж на осветление</li><li>Смяна на контакти</li></ul></button>
+          <button class="category-card" data-category="Боядисване"><span class="category-icon" data-service-icon="Боядисване" aria-hidden="true"></span><b>Боядисване</b><ul class="category-list"><li>Боядисване на стени</li><li>Шпакловка</li><li>Декоративни мазилки</li></ul></button>
+          <button class="category-card" data-category="Строителство"><span class="category-icon" data-service-icon="Строителство" aria-hidden="true"></span><b>Строителство</b><ul class="category-list"><li>Зидария</li><li>Изливане на бетон</li><li>Изграждане на основи</li></ul></button>
+          <button class="category-card" data-category="Ремонти"><span class="category-icon" data-service-icon="Ремонти" aria-hidden="true"></span><b>Ремонти</b><ul class="category-list"><li>Лепене на плочки</li><li>Поставяне на ламинат</li><li>Монтаж на гипсокартон</li></ul></button>
+          <button class="category-card" data-category="Монтажи"><span class="category-icon" data-service-icon="Монтажи" aria-hidden="true"></span><b>Монтажи</b><ul class="category-list"><li>Сглобяване на мебели</li><li>Монтаж на врати</li><li>Монтаж на кухни</li></ul></button>
+          <button class="category-card" data-category="Дограма и остъкляване"><span class="category-icon" data-service-icon="Дограма и остъкляване" aria-hidden="true"></span><b>Дограма и остъкляване</b><ul class="category-list"><li>Монтаж на PVC дограма</li><li>Остъкляване на тераси</li><li>Монтаж на комарници</li></ul></button>
+          <button class="category-card" data-category="Почистване"><span class="category-icon" data-service-icon="Почистване" aria-hidden="true"></span><b>Почистване</b><ul class="category-list"><li>Почистване след ремонт</li><li>Основно почистване</li><li>Почистване на прозорци</li></ul></button>
         </div>
       </section>
 
@@ -403,7 +404,6 @@
           <div class="about-story-copy">
             <h3>Твоята нужда Правилният специалист</h3>
             <p>Целта на екипа е да обедини търсенето и предлагането на строителни и ремонтни услуги в една удобна платформа. Потребителите могат лесно да откриват майстори по категория и населено място. Майсторите разполагат с възможност да представят услугите, опита и обявите си. Платформата улеснява първата стъпка към по-добра и по-ясна комуникация.</p>
-            <p>Платформата е създадена от Николай Гьошев и София Пройчева. Николай е ученик в 10. клас, а София учи в 8. клас в ПМГ „Константин Величков“.</p>
           </div>
           <img class="about-panel-image" src="images/authors-at-work.jpg" alt="Екип планира ремонт" />
         </div>
@@ -534,7 +534,23 @@
                 <h4>Нова заявка за проект</h4>
                 <label>Име за контакт<input required type="text" name="name" autocomplete="name" maxlength="100" /></label>
                 <label>Телефон<input required type="tel" name="phone" autocomplete="tel" maxlength="40" /></label>
+                <label>Избери майстор<select name="professionalId" required><option value="">Зареждане на майсторите…</option></select></label>
                 <label>Описание на проекта<textarea required name="description" rows="4" maxlength="2000" placeholder="Опиши накратко от каква услуга имаш нужда"></textarea></label>
+                <label>Избран период<input class="availability-calendar-date" name="preferredPeriodDisplay" readonly placeholder="Избери начало и край на периода" /></label>
+                <input name="preferredPeriod" type="hidden" />
+                <div class="availability-calendar" data-availability-calendar>
+                  <div class="availability-calendar-heading">
+                    <strong data-calendar-month></strong>
+                    <div class="availability-calendar-navigation">
+                      <button type="button" data-calendar-previous aria-label="Предишен месец">‹</button>
+                      <button type="button" data-calendar-next aria-label="Следващ месец">›</button>
+                    </div>
+                  </div>
+                  <div class="availability-calendar-weekdays" aria-hidden="true"><span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Нд</span></div>
+                  <div class="availability-calendar-days" data-calendar-days role="group" aria-label="Избери начална и крайна дата за периода"></div>
+                  <div class="availability-calendar-legend"><span><i></i> Свободен ден</span><span class="busy"><i></i> Зает период</span></div>
+                  <p class="availability-calendar-status" data-calendar-status role="status"></p>
+                </div>
                 <button class="account-primary-action" type="submit">Изпрати заявка <span aria-hidden="true">→</span></button>
                 <p class="account-form-status" id="account-project-status" role="status"></p>
               </form>
@@ -556,6 +572,8 @@
       </section>
     </div>
     <div class="toast" id="toast" role="status"></div>
-    <script src="app.js?v=20261122-picker-transitions"></script>
+    <script src="service-icons.js?v=20261124-simple-service-icons"></script>
+    <script src="availability-calendar.js?v=20261125-availability-period"></script>
+    <script src="app.js?v=20261125-availability-period"></script>
   </body>
 </html>

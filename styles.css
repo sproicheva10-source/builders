@@ -1462,7 +1462,11 @@ main>section[id]{scroll-margin-top:104px}
   .category-section .category-card b{font-size:13px}
   .category-section .category-card small{font-size:12px;line-height:1.4;color:#40566e!important}
 }
-.category-icon img,.service-picker-icon img,.service-option-icon img{width:100%;height:100%;border-radius:inherit;object-fit:cover}
+.category-icon svg,.service-picker-icon svg,.service-option-icon svg{width:25px;height:25px}
+.service-icon-accent{stroke:#f5a623}
+.category-section .category-icon{border:1px solid #dcebf3}
+.service-option-icon{color:#0786c7}
+.service-option-icon svg{width:25px;height:25px}
 
 @media(min-width:851px){
   .hero{grid-template-rows:minmax(0,1fr)}
@@ -1618,3 +1622,8 @@ img{max-width:100%}
   html:focus-within{scroll-behavior:auto}
   *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
+
+.site-header .auth-button{display:inline-flex;align-items:center;gap:8px;font-family:"DM Sans",Arial,sans-serif}
+.auth-profile-photo{width:27px;height:27px;border-radius:50%;object-fit:cover}
+.account-avatar{overflow:hidden}
+.account-avatar-photo{width:100%;height:100%;border-radius:inherit;object-fit:cover}

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="bg">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Административен профил | StroiHub</title>
+    <link rel="stylesheet" href="dashboard.css?v=20261124-admin" />
+    <link rel="stylesheet" href="ui-refresh.css?v=20261124-admin" />
+    <link rel="stylesheet" href="admin-dashboard.css?v=20261124-admin" />
+    <script src="admin-dashboard.js?v=20261124-admin" defer></script>
+  </head>
+  <body data-dashboard="admin">
+    <header class="dashboard-header">
+      <a class="brand" href="index.html" aria-label="Начална страница"><span class="brand-mark"><img src="images/logo.jpg" alt="" /></span></a>
+      <nav class="header-links" aria-label="Административна навигация">
+        <button class="admin-tab active" type="button" data-admin-tab="overview">Обзор</button>
+        <button class="admin-tab" type="button" data-admin-tab="users">Потребители</button>
+        <button class="admin-tab" type="button" data-admin-tab="listings">Обяви</button>
+        <button class="admin-tab" type="button" data-admin-tab="projects">Проекти</button>
+      </nav>
+      <div class="header-user">
+        <span class="header-avatar" data-user-initials aria-hidden="true">A</span>
+        <span class="header-user-copy"><strong data-user-name>Администратор</strong><small>Административен профил</small></span>
+        <button class="text-button" type="button" data-admin-logout>Изход</button>
+      </div>
+    </header>
+
+    <main class="dashboard-main">
+      <section class="welcome-panel admin-welcome" id="overview">
+        <div class="welcome-copy">
+          <span class="eyebrow">АДМИНИСТРАЦИЯ</span>
+          <h1>Административен панел</h1>
+          <p>Управлявай потребители, публикуваните обяви и заявките в платформата.</p>
+        </div>
+      </section>
+
+      <section class="dashboard-section" data-admin-section="overview">
+        <div class="section-title"><div><span class="eyebrow">ОБЩ ПРЕГЛЕД</span><h2>Статистика</h2></div></div>
+        <div class="stats-grid">
+          <article class="stat-card"><span>Потребители</span><strong data-summary="users">0</strong><small>Всички профили</small></article>
+          <article class="stat-card"><span>Клиенти</span><strong data-summary="clients">0</strong><small>Клиентски профили</small></article>
+          <article class="stat-card"><span>Специалисти</span><strong data-summary="professionals">0</strong><small>Професионалисти и фирми</small></article>
+          <article class="stat-card"><span>Обяви</span><strong data-summary="listings">0</strong><small>Активни публикации</small></article>
+          <article class="stat-card"><span>Проекти</span><strong data-summary="projects">0</strong><small>Получени заявки</small></article>
+          <article class="stat-card"><span>Съобщения</span><strong data-summary="messages">0</strong><small>От формата за контакт</small></article>
+        </div>
+      </section>
+
+      <section class="dashboard-section admin-section" data-admin-section="users" hidden>
+        <div class="section-title"><div><span class="eyebrow">ПОТРЕБИТЕЛИ</span><h2>Всички профили</h2></div></div>
+        <div class="admin-table-wrap"><table><thead><tr><th>Име</th><th>Имейл</th><th>Роля</th><th>Град</th><th>Действие</th></tr></thead><tbody id="admin-users"></tbody></table></div>
+      </section>
+
+      <section class="dashboard-section admin-section" data-admin-section="listings" hidden>
+        <div class="section-title"><div><span class="eyebrow">ПУБЛИКАЦИИ</span><h2>Обяви на специалистите</h2></div></div>
+        <div class="admin-table-wrap"><table><thead><tr><th>Услуга</th><th>Специалист</th><th>Град</th><th>Описание</th><th>Действие</th></tr></thead><tbody id="admin-listings"></tbody></table></div>
+      </section>
+
+      <section class="dashboard-section admin-section" data-admin-section="projects" hidden>
+        <div class="section-title"><div><span class="eyebrow">ЗАЯВКИ</span><h2>Проекти и статуси</h2></div></div>
+        <div class="admin-table-wrap"><table><thead><tr><th>Клиент</th><th>Услуга</th><th>Град</th><th>Статус</th><th>Специалист</th></tr></thead><tbody id="admin-projects"></tbody></table></div>
+      </section>
+      <p class="form-feedback" id="admin-feedback" role="status" aria-live="polite"></p>
+    </main>
+  </body>
+</html>

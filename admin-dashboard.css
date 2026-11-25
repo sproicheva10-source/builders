@@ -1,0 +1,13 @@
+.admin-welcome{min-height:220px}
+.admin-tab{border:0;border-bottom:2px solid transparent;padding:10px 4px;background:transparent;color:#294968;font-size:13px;font-weight:700;cursor:pointer}
+.admin-tab.active{border-bottom-color:var(--dashboard-blue);color:var(--dashboard-blue)}
+.admin-table-wrap{overflow-x:auto;border:1px solid var(--dashboard-line);border-radius:11px;background:#fff}
+.admin-table-wrap table{width:100%;border-collapse:collapse}
+.admin-table-wrap th,.admin-table-wrap td{padding:12px 14px;border-bottom:1px solid var(--dashboard-line);text-align:left;vertical-align:top}
+.admin-table-wrap th{background:#f7fafc;color:#60748a;font-size:11px;text-transform:uppercase}
+.admin-table-wrap td{font-size:12px}
+.admin-table-wrap tr:last-child td{border-bottom:0}
+.admin-description{max-width:280px}
+.admin-danger{border:1px solid #ecc8cf;border-radius:7px;padding:6px 9px;background:#fff;color:#a73545;font-size:11px;font-weight:800;cursor:pointer}
+.admin-status{min-width:130px;min-height:36px;padding:7px}
+@media(max-width:850px){.header-links .admin-tab{min-width:max-content}.admin-welcome{min-height:0}}

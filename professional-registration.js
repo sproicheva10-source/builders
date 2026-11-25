@@ -9,7 +9,6 @@ const stepIndicators = [...document.querySelectorAll("[data-step-indicator]")];
 const backButton = document.querySelector("[data-registration-back]");
 const nextButton = document.querySelector("[data-registration-next]");
 const submitButton = document.querySelector("[data-registration-submit]");
-const serviceSelectionSummary = document.querySelector("#service-selection-summary");
 const serviceGroups = {
   "Боядисване":["Боядисване на стени","Шпакловка","Декоративни мазилки"],
   "Електро услуги":["Ремонт на електроинсталации","Монтаж на осветление","Смяна на контакти"],
@@ -47,40 +46,11 @@ function selectedCategories() {
   return [...categoryContainer.querySelectorAll('input[name="categories"]:checked')].map((input) => input.value);
 }
 
-function updateCategoryCardStates() {
-  const primaryCategory = categoryContainer.querySelector('input[name="primaryCategory"]:checked')?.value;
-  categoryContainer.querySelectorAll(".category-option").forEach((card) => {
-    const checkbox = card.querySelector('input[name="categories"]');
-    card.classList.toggle("selected", checkbox.checked);
-    card.classList.toggle("primary", checkbox.checked && checkbox.value === primaryCategory);
-  });
-}
-
-function updateServiceSelectionSummary() {
-  if (!selectedCategories().length) {
-    serviceSelectionSummary.textContent = "Първо избери поне една категория.";
-    return;
-  }
-  const selectedCount = serviceContainer.querySelectorAll('input[name="services"]:checked').length;
-  if (!selectedCount) {
-    serviceSelectionSummary.textContent = "Избери поне една конкретна услуга.";
-  } else {
-    serviceSelectionSummary.textContent = `${selectedCount} избрана${selectedCount === 1 ? "" : "и"} услуг${selectedCount === 1 ? "а" : "и"}`;
-  }
-}
-
 function renderServices() {
   const categories = selectedCategories();
   const selectedServices = new Set([...serviceContainer.querySelectorAll('input[name="services"]:checked')].map((input) => input.value));
   const currentPrimary = categoryContainer.querySelector('input[name="primaryCategory"]:checked')?.value;
   serviceContainer.replaceChildren();
-  updateCategoryCardStates();
-  if (!categories.length) {
-    const emptyState = document.createElement("p");
-    emptyState.className = "service-selection-empty";
-    emptyState.textContent = "Услугите ще се покажат след избиране на категория.";
-    serviceContainer.append(emptyState);
-  }
   categories.forEach((category) => {
     const group = document.createElement("fieldset");
     group.className = "registration-choice-group service-category";
@@ -89,27 +59,17 @@ function renderServices() {
     group.append(legend);
     serviceGroups[category].forEach((service) => {
       const label = document.createElement("label");
-      label.className = "choice-option service-option";
+      label.className = "choice-option";
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
       checkbox.name = "services";
       checkbox.value = service;
       checkbox.checked = selectedServices.has(service);
-      checkbox.addEventListener("change", () => {
-        label.classList.toggle("selected", checkbox.checked);
-        updateServiceSelectionSummary();
-        const groupCount = [...group.querySelectorAll('input[name="services"]:checked')].length;
-        legend.textContent = `${category} · ${groupCount} избрани`;
-      });
       label.append(checkbox, document.createTextNode(` ${service}`));
-      label.classList.toggle("selected", checkbox.checked);
       group.append(label);
     });
-    const selectedInGroup = [...selectedServices].filter((service) => serviceGroups[category].includes(service)).length;
-    legend.textContent = selectedInGroup ? `${category} · ${selectedInGroup} избрани` : category;
     serviceContainer.append(group);
   });
-  updateServiceSelectionSummary();
   if (currentPrimary && categories.includes(currentPrimary)) return;
   const firstCategory = categories[0];
   if (firstCategory) {

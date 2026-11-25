@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http.Json;
@@ -34,6 +35,12 @@ var dbFactory = app.Services.GetRequiredService<IDbContextFactory<StroiHubDbCont
 var data = LoadData(dbFactory, legacyDataPath);
 var dataChanged = app.Environment.IsDevelopment() &&
     EnsureDemoProfessionals(data, app.Environment.ContentRootPath);
+if (ConvertLegacyOfferPricesToEuro(data))
+    dataChanged = true;
+if (EnsureAdminAccount(data))
+    dataChanged = true;
+if (EnsureDemoLoginAccounts(data))
+    dataChanged = true;
 if (EnsureProfessionalListings(data))
     dataChanged = true;
 if (dataChanged)
@@ -51,7 +58,7 @@ app.MapPost("/api/auth/register", (RegisterRequest request) =>
     if (!IsValidEmail(request.Email))
         return Results.BadRequest(new { message = "Въведи валиден имейл адрес с домейн, например name@example.com." });
     if (request.Password is null || !IsValidPassword(request.Password))
-        return Results.BadRequest(new { message = "Паролата трябва да съдържа поне 8 символа, главна и малка буква, цифра и специален символ." });
+        return Results.BadRequest(new { message = "Паролата трябва да е 8–128 символа и да съдържа главна и малка буква и поне една цифра." });
 
     if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Trim().Length > 100 ||
         string.IsNullOrWhiteSpace(request.Phone) || request.Phone.Trim().Length > 40 ||
@@ -135,7 +142,7 @@ app.MapPost("/api/auth/register", (RegisterRequest request) =>
         SaveData(dbFactory, data);
         var token = CreateToken();
         activeTokens[token] = user.Id;
-        return Results.Ok(new { token, user = new { user.Name, user.Email, user.Role, user.Phone, user.City } });
+        return Results.Ok(new { token, user = new { user.Name, user.Email, user.Role, user.Phone, user.City, user.ProfilePhoto } });
     }
 });
 
@@ -145,8 +152,8 @@ app.MapGet("/api/account/incoming-requests", (HttpRequest httpRequest) =>
     if (userId is null) return Results.Unauthorized();
     lock (dataLock)
     {
-        var user = data.Users.FirstOrDefault(candidate => candidate.Id == userId);
-        if (user is null) return Results.NotFound(new { message = "Профилът не е намерен." });
+        var professional = data.Users.FirstOrDefault(candidate => candidate.Id == userId);
+        if (professional is null) return Results.NotFound(new { message = "Профилът на майстора не е намерен." });
         var projects = data.Projects.Where(project => project.ProfessionalId == userId)
             .OrderByDescending(project => project.CreatedAt)
             .Select(project => new
@@ -158,40 +165,91 @@ app.MapGet("/api/account/incoming-requests", (HttpRequest httpRequest) =>
                 project.Service,
                 project.City,
                 project.PreferredPeriod,
+                project.ProposedPeriod,
+                project.OfferedPrice,
                 project.Status,
-                project.CreatedAt,
-                isNew = !user.IncomingRequestsViewedAt.HasValue ||
-                    project.CreatedAt > user.IncomingRequestsViewedAt.Value
+                project.CreatedAt
             })
             .ToList();
-        return Results.Ok(projects);
+        var busyDates = GetProfessionalBusyDates(data, professional)
+            .Select(date => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))
+            .ToList();
+        return Results.Ok(new { requests = projects, busyDates });
     }
 });
 
-app.MapPost("/api/account/incoming-requests/mark-viewed", (HttpRequest httpRequest) =>
+app.MapPatch("/api/account/incoming-requests/{projectId}", (HttpRequest httpRequest, string projectId, IncomingRequestUpdate request) =>
 {
     var userId = GetAuthorizedUserId(httpRequest, activeTokens, dataLock);
     if (userId is null) return Results.Unauthorized();
-    lock (dataLock)
-    {
-        var user = data.Users.FirstOrDefault(candidate => candidate.Id == userId);
-        if (user is null) return Results.NotFound(new { message = "Профилът не е намерен." });
-        user.IncomingRequestsViewedAt = DateTimeOffset.UtcNow;
-        SaveData(dbFactory, data);
-        return Results.Ok(new { unreadCount = 0 });
-    }
-});
-
-app.MapPatch("/api/account/incoming-requests/{projectId}", (HttpRequest httpRequest, string projectId, RequestStatusUpdate request) =>
-{
-    var userId = GetAuthorizedUserId(httpRequest, activeTokens, dataLock);
-    if (userId is null) return Results.Unauthorized();
-    if (request.Status is not ("Прието" or "Отказано" or "В процес на обсъждане" or "Приключено"))
+    if (request.Status is not ("Прието" or "Отказано" or "В процес на обсъждане" or "Приключено" or "Предложение от майстора"))
         return Results.BadRequest(new { message = "Избраният статус не е валиден." });
     lock (dataLock)
     {
         var project = data.Projects.FirstOrDefault(candidate => candidate.Id == projectId && candidate.ProfessionalId == userId);
         if (project is null) return Results.NotFound(new { message = "Запитването не е намерено." });
+        var canAcceptOrDecline = project.Status == "Изпратено" && request.Status is ("Прието" or "Отказано");
+        var canDeclineOffer = project.Status == "Предложение от майстора" && request.Status == "Отказано";
+        var canSendOffer = project.Status is ("Изпратено" or "Предложение от майстора") &&
+            request.Status == "Предложение от майстора";
+        var canComplete = project.Status is ("Прието" or "В процес на обсъждане") && request.Status == "Приключено";
+        if (!canAcceptOrDecline && !canDeclineOffer && !canSendOffer && !canComplete)
+            return Results.Conflict(new { message = "Запитването вече е обработено или този преход не е разрешен." });
+        if (request.Status == "Прието" &&
+            TryParsePreferredPeriod(GetProjectPeriod(project), out var requestedStart, out var requestedEnd) &&
+            data.Users.FirstOrDefault(candidate => candidate.Id == userId) is { } professional &&
+            GetProfessionalBusyDates(data, professional).Any(date => date >= requestedStart && date <= requestedEnd))
+            return Results.Conflict(new { message = "Периодът по тази заявка вече е зает. Свържи се с клиента за друг период." });
+
+        if (canSendOffer)
+        {
+            if (!TryParseBookablePeriod(request.ProposedPeriod, out var proposedStart, out var proposedEnd))
+                return Results.BadRequest(new { message = "Избери валиден период от поне два дни." });
+            if (request.OfferedPrice is null || request.OfferedPrice < 0.01m || request.OfferedPrice > 100_000_000m)
+                return Results.BadRequest(new { message = "Посочи цена между 0,01 и 100 000 000 евро." });
+            var offerProfessional = data.Users.FirstOrDefault(candidate => candidate.Id == userId);
+            if (offerProfessional is null)
+                return Results.NotFound(new { message = "Профилът на майстора не е намерен." });
+            if (GetProfessionalBusyDates(data, offerProfessional)
+                .Any(date => date >= proposedStart && date <= proposedEnd))
+                return Results.Conflict(new { message = "Предложеният период включва зает ден. Избери друг период." });
+
+            project.ProposedPeriod = request.ProposedPeriod!.Trim();
+            project.OfferedPrice = decimal.Round(request.OfferedPrice.Value, 2);
+            project.OfferedPriceCurrency = "EUR";
+        }
+
+        project.Status = request.Status;
+        SaveData(dbFactory, data);
+        return Results.Ok(new { project.Id, project.Status, project.ProposedPeriod, project.OfferedPrice });
+    }
+});
+
+app.MapPatch("/api/account/projects/{projectId}/response", (HttpRequest httpRequest, string projectId, RequestStatusUpdate request) =>
+{
+    var userId = GetAuthorizedUserId(httpRequest, activeTokens, dataLock);
+    if (userId is null) return Results.Unauthorized();
+    if (request.Status is not ("Прието" or "Отказано"))
+        return Results.BadRequest(new { message = "Избраният отговор не е валиден." });
+
+    lock (dataLock)
+    {
+        var project = data.Projects.FirstOrDefault(candidate => candidate.Id == projectId && candidate.UserId == userId);
+        if (project is null) return Results.NotFound(new { message = "Заявката не е намерена." });
+        if (project.Status != "Предложение от майстора")
+            return Results.Conflict(new { message = "Няма чакащо предложение за тази заявка." });
+
+        if (request.Status == "Прието")
+        {
+            if (!TryParseBookablePeriod(GetProjectPeriod(project), out var acceptedStart, out var acceptedEnd))
+                return Results.Conflict(new { message = "Предложеният период вече не е валиден." });
+            var professional = data.Users.FirstOrDefault(candidate => candidate.Id == project.ProfessionalId);
+            if (professional is null)
+                return Results.NotFound(new { message = "Профилът на майстора не е намерен." });
+            if (GetProfessionalBusyDates(data, professional).Any(date => date >= acceptedStart && date <= acceptedEnd))
+                return Results.Conflict(new { message = "Предложеният период вече е зает. Свържи се с майстора за нов период." });
+        }
+
         project.Status = request.Status;
         SaveData(dbFactory, data);
         return Results.Ok(new { project.Id, project.Status });
@@ -205,7 +263,7 @@ app.MapGet("/api/account/portfolio", (HttpRequest httpRequest) =>
     lock (dataLock)
         return Results.Ok(data.PortfolioProjects.Where(project => project.UserId == userId)
             .OrderByDescending(project => project.CreatedAt)
-            .Select(project => new { project.Id, project.Title, project.Category, project.Description, project.Image, project.CreatedAt })
+            .Select(project => new { project.Id, project.Title, project.Category, project.Description, project.CreatedAt })
             .ToList());
 });
 
@@ -215,9 +273,8 @@ app.MapPost("/api/account/portfolio", (HttpRequest httpRequest, PortfolioRequest
     if (userId is null) return Results.Unauthorized();
     if (string.IsNullOrWhiteSpace(request.Title) || request.Title.Trim().Length > 100 ||
         string.IsNullOrWhiteSpace(request.Category) || request.Category.Trim().Length > 100 ||
-        string.IsNullOrWhiteSpace(request.Description) || request.Description.Trim().Length > 1000 ||
-        !IsValidImageDataUrl(request.Image, 2 * 1024 * 1024))
-        return Results.BadRequest(new { message = "Попълни заглавие, категория, описание и валидна снимка до 2 MB." });
+        string.IsNullOrWhiteSpace(request.Description) || request.Description.Trim().Length > 1000)
+        return Results.BadRequest(new { message = "Попълни заглавие, категория и описание на проекта." });
     lock (dataLock)
     {
         var user = data.Users.FirstOrDefault(candidate => candidate.Id == userId);
@@ -230,12 +287,11 @@ app.MapPost("/api/account/portfolio", (HttpRequest httpRequest, PortfolioRequest
             Title = request.Title.Trim(),
             Category = request.Category.Trim(),
             Description = request.Description.Trim(),
-            Image = request.Image!,
             CreatedAt = DateTimeOffset.UtcNow
         };
         data.PortfolioProjects.Add(project);
         SaveData(dbFactory, data);
-        return Results.Ok(new { project.Id, project.Title, project.Category, project.Description, project.Image, project.CreatedAt });
+        return Results.Ok(new { project.Id, project.Title, project.Category, project.Description, project.CreatedAt });
     }
 });
 
@@ -256,17 +312,17 @@ app.MapDelete("/api/account/portfolio/{projectId}", (HttpRequest httpRequest, st
 app.MapPost("/api/auth/login", (LoginRequest request) =>
 {
     if (string.IsNullOrWhiteSpace(request.Email) || request.Password is null)
-        return Results.Json(new { message = "Имейлът или паролата са невалидни." }, statusCode: StatusCodes.Status401Unauthorized);
+        return Results.Unauthorized();
     lock (dataLock)
     {
         var email = request.Email.Trim().ToLowerInvariant();
         var user = data.Users.FirstOrDefault(candidate => candidate.Email == email);
         if (user is null || !VerifyPassword(request.Password, user.Password))
-            return Results.Json(new { message = "Имейлът или паролата са невалидни." }, statusCode: StatusCodes.Status401Unauthorized);
+            return Results.Unauthorized();
 
         var token = CreateToken();
         activeTokens[token] = user.Id;
-        return Results.Ok(new { token, user = new { user.Name, user.Email, user.Role, user.Phone, user.City } });
+        return Results.Ok(new { token, user = new { user.Name, user.Email, user.Role, user.Phone, user.City, user.ProfilePhoto } });
     }
 });
 
@@ -279,20 +335,12 @@ app.MapPost("/api/auth/forgot-password", async (PasswordResetRequest request, IC
     var smtpFrom = configuration["STROIHUB_SMTP_FROM"];
     var resetBaseUrl = configuration["STROIHUB_PUBLIC_URL"];
     var port = int.TryParse(configuration["STROIHUB_SMTP_PORT"], out var configuredPort) ? configuredPort : 587;
-    var smtpUser = configuration["STROIHUB_SMTP_USER"];
-    var smtpPassword = configuration["STROIHUB_SMTP_PASSWORD"];
-    var smtpConfigured = !string.IsNullOrWhiteSpace(smtpHost) &&
-        !string.IsNullOrWhiteSpace(smtpFrom) &&
-        port is >= 1 and <= 65535 &&
-        System.Net.Mail.MailAddress.TryCreate(smtpFrom, out _) &&
-        (string.IsNullOrWhiteSpace(smtpUser) || !string.IsNullOrWhiteSpace(smtpPassword));
-    Uri? publicUri = Uri.TryCreate(resetBaseUrl, UriKind.Absolute, out var configuredPublicUri) &&
-        (configuredPublicUri.Scheme == Uri.UriSchemeHttps || configuredPublicUri.IsLoopback)
-            ? configuredPublicUri
-            : null;
-    if ((!smtpConfigured || publicUri is null) && !app.Environment.IsDevelopment())
+    if (string.IsNullOrWhiteSpace(smtpHost) || string.IsNullOrWhiteSpace(smtpFrom) ||
+        port is < 1 or > 65535 ||
+        !System.Net.Mail.MailAddress.TryCreate(smtpFrom, out _) ||
+        !Uri.TryCreate(resetBaseUrl, UriKind.Absolute, out var publicUri) ||
+        (publicUri.Scheme != Uri.UriSchemeHttps && !publicUri.IsLoopback))
         return Results.Problem("Изпращането на имейли не е конфигурирано на сървъра.", statusCode: StatusCodes.Status503ServiceUnavailable);
-    publicUri ??= new Uri("http://localhost:5087");
 
     User? user;
     string rawToken;
@@ -310,16 +358,7 @@ app.MapPost("/api/auth/forgot-password", async (PasswordResetRequest request, IC
     }
 
     var resetLink = $"{publicUri.ToString().TrimEnd('/')}/reset-password.html?token={Uri.EscapeDataString(rawToken)}";
-    if (!smtpConfigured)
-        return Results.Ok(new
-        {
-            message = "Локална връзка за възстановяване (валидна един час):",
-            resetLink
-        });
-
-    var configuredSmtpHost = smtpHost ?? throw new InvalidOperationException("SMTP host disappeared after validation.");
-    var configuredSmtpFrom = smtpFrom ?? throw new InvalidOperationException("SMTP sender disappeared after validation.");
-    var message = new System.Net.Mail.MailMessage(configuredSmtpFrom, user.Email)
+    var message = new System.Net.Mail.MailMessage(smtpFrom, user.Email)
     {
         Subject = "Възстановяване на паролата за StroiHub",
         Body = $"За да зададеш нова парола, отвори този адрес в рамките на един час:\n\n{resetLink}\n\nАко не си поискал възстановяване, игнорирай това съобщение.",
@@ -329,7 +368,9 @@ app.MapPost("/api/auth/forgot-password", async (PasswordResetRequest request, IC
 
     try
     {
-        using var smtp = new System.Net.Mail.SmtpClient(configuredSmtpHost, port) { EnableSsl = true };
+        using var smtp = new System.Net.Mail.SmtpClient(smtpHost, port) { EnableSsl = true };
+        var smtpUser = configuration["STROIHUB_SMTP_USER"];
+        var smtpPassword = configuration["STROIHUB_SMTP_PASSWORD"];
         if (!string.IsNullOrWhiteSpace(smtpUser))
             smtp.Credentials = new System.Net.NetworkCredential(smtpUser, smtpPassword);
         await smtp.SendMailAsync(message);
@@ -361,7 +402,7 @@ app.MapPost("/api/auth/reset-password", (PasswordResetCompletionRequest request)
     if (string.IsNullOrWhiteSpace(request.Token))
         return Results.BadRequest(new { message = "Линкът е невалиден или е изтекъл. Поискай нов." });
     if (request.Password is null || !IsValidPassword(request.Password))
-        return Results.BadRequest(new { message = "Паролата трябва да съдържа поне 8 символа, главна и малка буква, цифра и специален символ." });
+        return Results.BadRequest(new { message = "Паролата трябва да е 8–128 символа и да съдържа главна и малка буква и поне една цифра." });
 
     var tokenHash = HashResetToken(request.Token);
     lock (dataLock)
@@ -395,38 +436,6 @@ app.MapPost("/api/auth/logout", (HttpRequest httpRequest) =>
     return Results.Ok();
 });
 
-app.MapGet("/api/account", (HttpRequest httpRequest) =>
-{
-    var userId = GetAuthorizedUserId(httpRequest, activeTokens, dataLock);
-    if (userId is null) return Results.Unauthorized();
-    lock (dataLock)
-    {
-        var user = data.Users.FirstOrDefault(candidate => candidate.Id == userId);
-        if (user is null) return Results.NotFound(new { message = "Профилът не е намерен." });
-        return Results.Ok(new
-        {
-            user = new
-            {
-                user.Id,
-                user.Name,
-                user.Email,
-                user.Role,
-                user.Phone,
-                user.City,
-                user.Region,
-                user.PrimaryCategory,
-                user.ProfileDescription,
-                user.Experience,
-                user.ProfilePhoto,
-                user.IsProfilePublic,
-                user.RequestNotifications,
-                user.ReviewNotifications,
-                user.ProfileViews
-            }
-        });
-    }
-});
-
 app.MapPut("/api/account", (HttpRequest httpRequest, AccountUpdateRequest request) =>
 {
     var userId = GetAuthorizedUserId(httpRequest, activeTokens, dataLock);
@@ -439,8 +448,7 @@ app.MapPut("/api/account", (HttpRequest httpRequest, AccountUpdateRequest reques
         (request.Phone?.Trim().Length ?? 0) > 40 ||
         (request.City?.Trim().Length ?? 0) > 80 ||
         (request.ProfileDescription?.Trim().Length ?? 0) > 600 ||
-        (request.Experience is not null && request.Experience is < 0 or > 70) ||
-        (!string.IsNullOrEmpty(request.ProfilePhoto) && !IsValidImageDataUrl(request.ProfilePhoto, 2 * 1024 * 1024)))
+        (request.Experience is not null && request.Experience is < 0 or > 70))
         return Results.BadRequest(new { message = "Въведете валидни име, имейл, телефон и населено място." });
 
     lock (dataLock)
@@ -457,31 +465,9 @@ app.MapPut("/api/account", (HttpRequest httpRequest, AccountUpdateRequest reques
         if (request.Phone is not null) user.Phone = request.Phone.Trim();
         if (request.City is not null) user.City = request.City.Trim();
         if (request.ProfileDescription is not null) user.ProfileDescription = request.ProfileDescription.Trim();
-        user.Experience = request.Experience;
-        if (request.ProfilePhoto is not null) user.ProfilePhoto = request.ProfilePhoto;
+        if (request.Experience is not null) user.Experience = request.Experience.Value;
         SaveData(dbFactory, data);
-        return Results.Ok(new { user = new { user.Id, user.Name, user.Email, user.Role, user.Phone, user.City, user.ProfileDescription, user.Experience, user.ProfilePhoto } });
-    }
-});
-
-app.MapPut("/api/account/settings", (HttpRequest httpRequest, AccountSettingsRequest request) =>
-{
-    var userId = GetAuthorizedUserId(httpRequest, activeTokens, dataLock);
-    if (userId is null) return Results.Unauthorized();
-    lock (dataLock)
-    {
-        var user = data.Users.FirstOrDefault(candidate => candidate.Id == userId);
-        if (user is null) return Results.NotFound(new { message = "Профилът не е намерен." });
-        user.RequestNotifications = request.RequestNotifications;
-        user.ReviewNotifications = request.ReviewNotifications;
-        user.IsProfilePublic = request.IsProfilePublic;
-        SaveData(dbFactory, data);
-        return Results.Ok(new
-        {
-            user.RequestNotifications,
-            user.ReviewNotifications,
-            user.IsProfilePublic
-        });
+        return Results.Ok(new { user = new { user.Name, user.Email, user.Role, user.Phone, user.City, user.ProfilePhoto, user.ProfileDescription, user.Experience } });
     }
 });
 
@@ -505,9 +491,7 @@ app.MapGet("/api/professionals", (string? service, string? city) =>
                 listing.CreatedAt,
                 User = data.Users.FirstOrDefault(user => user.Id == listing.UserId)
             })
-            .Where(entry => entry.User is not null &&
-                entry.User.Role is "professional" or "company" &&
-                entry.User.IsProfilePublic)
+            .Where(entry => entry.User is not null && entry.User.Role is "professional" or "company")
             .Select(entry => new
             {
                 id = entry.UserId,
@@ -528,27 +512,22 @@ app.MapGet("/api/professionals", (string? service, string? city) =>
     }
 });
 
-app.MapGet("/api/professionals/{userId}", (HttpRequest httpRequest, string userId) =>
+app.MapGet("/api/professionals/{userId}", (string userId) =>
 {
     lock (dataLock)
     {
         var user = data.Users.FirstOrDefault(candidate => candidate.Id == userId &&
             candidate.Role is "professional" or "company");
-        if (user is null || !user.IsProfilePublic)
-            return Results.NotFound(new { message = "Профилът не е намерен." });
-        if (GetAuthorizedUserId(httpRequest, activeTokens, dataLock) != userId)
-        {
-            user.ProfileViews++;
-            SaveData(dbFactory, data);
-        }
-        var listings = data.Listings.Where(listing => listing.UserId == userId)
-            .Select(listing => new { listing.Service, listing.Title, listing.City, listing.Description, listing.Price, listing.CreatedAt })
+        if (user is null) return Results.NotFound(new { message = "Профилът не е намерен." });
+        var professionalListings = data.Listings.Where(listing => listing.UserId == userId).ToList();
+        var listings = professionalListings
+            .Select(listing => new { listing.Service, listing.Title, listing.City, listing.Description, listing.CreatedAt })
             .ToList();
         var portfolio = data.PortfolioProjects.Where(project => project.UserId == userId)
             .OrderByDescending(project => project.CreatedAt)
-            .Select(project => new { project.Title, project.Category, project.Description, project.Image, project.CreatedAt })
+            .Select(project => new { project.Title, project.Category, project.Description, project.CreatedAt })
             .ToList();
-        return Results.Ok(new { id = user.Id, name = user.Name, role = user.Role, isDemo = IsDemoProfessional(user), city = user.City, region = user.Region, additionalCities = user.AdditionalCities, description = user.ProfileDescription, experience = user.Experience, primaryCategory = user.PrimaryCategory, categories = user.Categories, services = user.Services, workPreference = user.WorkPreference, professionalLink = user.ProfessionalLink, profilePhoto = user.ProfilePhoto, portfolioPhotos = user.PortfolioPhotos, reviews = GetProfileReviews(data, user), listings, portfolio });
+        return Results.Ok(new { id = user.Id, name = user.Name, role = user.Role, isDemo = IsDemoProfessional(user), city = user.City, cities = GetProfessionalCities(user, professionalListings), busyDates = GetProfessionalBusyDates(data, user).Select(date => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)).ToList(), region = user.Region, additionalCities = user.AdditionalCities, description = user.ProfileDescription, experience = user.Experience, primaryCategory = user.PrimaryCategory, categories = user.Categories, services = user.Services, workPreference = user.WorkPreference, professionalLink = user.ProfessionalLink, profilePhoto = user.ProfilePhoto, portfolioPhotos = user.PortfolioPhotos, reviews = GetProfileReviews(data, user), listings, portfolio });
     }
 });
 
@@ -567,7 +546,6 @@ app.MapDelete("/api/account", (HttpRequest httpRequest) =>
         data.Projects.RemoveAll(project => project.ProfessionalId == userId);
         data.Listings.RemoveAll(listing => listing.UserId == userId);
         data.PortfolioProjects.RemoveAll(project => project.UserId == userId);
-        data.Reviews.RemoveAll(review => review.ReviewerId == userId || review.ProfessionalId == userId);
         data.Favorites.RemoveAll(favorite => favorite.UserId == userId || favorite.ProfessionalId == userId);
         foreach (var token in activeTokens.Where(entry => entry.Value == userId).Select(entry => entry.Key).ToList())
             activeTokens.Remove(token);
@@ -593,7 +571,10 @@ app.MapGet("/api/account/projects", (HttpRequest httpRequest) =>
                 project.Service,
                 project.City,
                 project.PreferredPeriod,
+                project.ProposedPeriod,
+                project.OfferedPrice,
                 project.ProfessionalId,
+                ProfessionalName = data.Users.FirstOrDefault(user => user.Id == project.ProfessionalId)?.Name ?? "",
                 project.Status,
                 project.CreatedAt
             })
@@ -719,7 +700,7 @@ app.MapGet("/api/account/listings", (HttpRequest httpRequest) =>
     {
         var listings = data.Listings.Where(listing => listing.UserId == userId)
             .OrderByDescending(listing => listing.CreatedAt)
-            .Select(listing => new { listing.Id, listing.Service, listing.Title, listing.City, listing.Description, listing.Price, listing.CreatedAt })
+            .Select(listing => new { listing.Id, listing.Service, listing.Title, listing.City, listing.Description, listing.CreatedAt })
             .ToList();
         return Results.Ok(listings);
     }
@@ -733,8 +714,7 @@ app.MapPost("/api/account/listings", (HttpRequest httpRequest, ListingRequest re
         string.IsNullOrWhiteSpace(request.City) ||
         request.City.Trim().Length > 100 ||
         string.IsNullOrWhiteSpace(request.Description) || request.Description.Trim().Length > 2000 ||
-        (request.Title?.Trim().Length ?? 0) > 100 ||
-        (request.Price?.Trim().Length ?? 0) > 100)
+        (request.Title?.Trim().Length ?? 0) > 100)
         return Results.BadRequest(new { message = "Попълнете услугата, населеното място и описанието." });
 
     lock (dataLock)
@@ -752,37 +732,11 @@ app.MapPost("/api/account/listings", (HttpRequest httpRequest, ListingRequest re
             Title = string.IsNullOrWhiteSpace(request.Title) ? request.Service.Trim() : request.Title.Trim(),
             City = request.City.Trim(),
             Description = request.Description.Trim(),
-            Price = request.Price?.Trim() ?? "",
             CreatedAt = DateTimeOffset.UtcNow
         };
         data.Listings.Add(listing);
         SaveData(dbFactory, data);
-        return Results.Ok(new { listing.Id, listing.Service, listing.Title, listing.City, listing.Description, listing.Price, listing.CreatedAt });
-    }
-});
-
-app.MapPut("/api/account/listings/{listingId}", (HttpRequest httpRequest, string listingId, ListingUpdateRequest request) =>
-{
-    var userId = GetAuthorizedUserId(httpRequest, activeTokens, dataLock);
-    if (userId is null) return Results.Unauthorized();
-    if (string.IsNullOrWhiteSpace(request.Service) || request.Service.Trim().Length > 100 ||
-        string.IsNullOrWhiteSpace(request.City) || request.City.Trim().Length > 100 ||
-        string.IsNullOrWhiteSpace(request.Description) || request.Description.Trim().Length > 2000 ||
-        (request.Title?.Trim().Length ?? 0) > 100 ||
-        (request.Price?.Trim().Length ?? 0) > 100)
-        return Results.BadRequest(new { message = "Попълнете валидни категория, име, описание и населено място." });
-
-    lock (dataLock)
-    {
-        var listing = data.Listings.FirstOrDefault(candidate => candidate.Id == listingId && candidate.UserId == userId);
-        if (listing is null) return Results.NotFound(new { message = "Услугата не е намерена." });
-        listing.Service = request.Service.Trim();
-        listing.Title = string.IsNullOrWhiteSpace(request.Title) ? request.Service.Trim() : request.Title.Trim();
-        listing.City = request.City.Trim();
-        listing.Description = request.Description.Trim();
-        listing.Price = request.Price?.Trim() ?? "";
-        SaveData(dbFactory, data);
-        return Results.Ok(new { listing.Id, listing.Service, listing.Title, listing.City, listing.Description, listing.Price, listing.CreatedAt });
+        return Results.Ok(new { listing.Id, listing.Service, listing.Title, listing.City, listing.Description, listing.CreatedAt });
     }
 });
 
@@ -805,27 +759,44 @@ app.MapPost("/api/projects", (HttpRequest httpRequest, ProjectRequest request) =
     var userId = GetAuthorizedUserId(httpRequest, activeTokens, dataLock);
     if (userId is null) return Results.Unauthorized();
 
+    var professionalId = request.ProfessionalId?.Trim() ?? "";
+    var service = request.Service?.Trim() ?? "";
+    var city = request.City?.Trim() ?? "";
+    var preferredPeriod = request.PreferredPeriod?.Trim() ?? "";
     if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Trim().Length > 100 ||
         string.IsNullOrWhiteSpace(request.Phone) || request.Phone.Trim().Length > 40 ||
         string.IsNullOrWhiteSpace(request.Description) || request.Description.Trim().Length > 2000 ||
-        (request.Service?.Trim().Length ?? 0) > 100 ||
-        (request.City?.Trim().Length ?? 0) > 80 ||
-        (request.PreferredPeriod?.Trim().Length ?? 0) > 100)
-        return Results.BadRequest(new { message = "Попълнете валидни име, телефон и описание на проекта." });
+        string.IsNullOrWhiteSpace(professionalId) || professionalId.Length > 64 ||
+        string.IsNullOrWhiteSpace(service) || service.Length > 100 ||
+        string.IsNullOrWhiteSpace(city) || city.Length > 80 ||
+        preferredPeriod.Length > 100)
+        return Results.BadRequest(new { message = "Избери майстор и попълни валидни име, телефон и описание на проекта." });
+    if (!TryParsePreferredPeriod(preferredPeriod, out var requestedStart, out var requestedEnd) ||
+        requestedStart < DateOnly.FromDateTime(DateTime.Today) ||
+        requestedEnd <= requestedStart ||
+        requestedEnd > GetLatestSelectableDate())
+        return Results.BadRequest(new { message = "Избери валиден свободен период с продължителност поне два дни в календара." });
 
     lock (dataLock)
     {
         var user = data.Users.FirstOrDefault(candidate => candidate.Id == userId);
         if (user is null) return Results.NotFound(new { message = "Профилът не е намерен." });
         if (user.Role != "client") return Results.Forbid();
-        if (!string.IsNullOrWhiteSpace(request.ProfessionalId))
-        {
-            var listing = data.Listings.FirstOrDefault(candidate =>
-                candidate.UserId == request.ProfessionalId &&
-                (string.IsNullOrWhiteSpace(request.Service) || candidate.Service == request.Service.Trim()));
-            if (listing is null)
-                return Results.NotFound(new { message = "Избраният специалист няма активна обява за тази услуга." });
-        }
+        var professional = data.Users.FirstOrDefault(candidate =>
+            candidate.Id == professionalId && (candidate.Role is "professional" or "company"));
+        if (professional is null)
+            return Results.NotFound(new { message = "Избраният профил на майстор не е намерен." });
+        var professionalListings = data.Listings.Where(candidate => candidate.UserId == professional.Id).ToList();
+        var listing = professionalListings.FirstOrDefault(candidate =>
+            candidate.UserId == professional.Id &&
+            candidate.Service.Equals(service, StringComparison.OrdinalIgnoreCase));
+        if (listing is null)
+            return Results.NotFound(new { message = "Избраният специалист няма активна обява за тази услуга." });
+        if (!GetProfessionalCities(professional, professionalListings)
+            .Contains(city, StringComparer.OrdinalIgnoreCase))
+            return Results.BadRequest(new { message = "Избраното населено място не е сред тези, в които работи майсторът." });
+        if (GetProfessionalBusyDates(data, professional).Any(date => date >= requestedStart && date <= requestedEnd))
+            return Results.Conflict(new { message = "Избраният период включва зает ден. Избери друг свободен период от календара." });
 
         var project = new Project
         {
@@ -834,10 +805,10 @@ app.MapPost("/api/projects", (HttpRequest httpRequest, ProjectRequest request) =
             Name = request.Name.Trim(),
             Phone = request.Phone.Trim(),
             Description = request.Description.Trim(),
-            Service = request.Service?.Trim() ?? "",
-            City = request.City?.Trim() ?? "",
-            PreferredPeriod = request.PreferredPeriod?.Trim() ?? "",
-            ProfessionalId = request.ProfessionalId?.Trim() ?? "",
+            Service = service,
+            City = city,
+            PreferredPeriod = preferredPeriod,
+            ProfessionalId = professionalId,
             Status = "Изпратено",
             CreatedAt = DateTimeOffset.UtcNow
         };
@@ -885,14 +856,13 @@ app.MapPost("/api/contact", async (ContactRequest request, IConfiguration config
     var smtpFrom = configuration["STROIHUB_SMTP_FROM"];
     var smtpUser = configuration["STROIHUB_SMTP_USER"];
     var smtpPassword = configuration["STROIHUB_SMTP_PASSWORD"];
-    var contactTo = configuration["STROIHUB_CONTACT_TO"];
+    var contactTo = configuration["STROIHUB_CONTACT_TO"] ?? "stroihub27@gmail.com";
     var port = int.TryParse(configuration["STROIHUB_SMTP_PORT"], out var configuredPort) ? configuredPort : 587;
 
     if (string.IsNullOrWhiteSpace(smtpHost) ||
         string.IsNullOrWhiteSpace(smtpFrom) ||
         string.IsNullOrWhiteSpace(smtpUser) ||
         string.IsNullOrWhiteSpace(smtpPassword) ||
-        string.IsNullOrWhiteSpace(contactTo) ||
         port is < 1 or > 65535 ||
         !System.Net.Mail.MailAddress.TryCreate(smtpFrom, out _) ||
         !System.Net.Mail.MailAddress.TryCreate(contactTo, out _))
@@ -957,12 +927,284 @@ app.MapPost("/api/contact", async (ContactRequest request, IConfiguration config
     return Results.Ok(new { message = "Съобщението е изпратено успешно." });
 });
 
+app.MapGet("/api/admin/summary", (HttpRequest httpRequest) =>
+{
+    var userId = GetAuthorizedUserId(httpRequest, activeTokens, dataLock);
+    if (!IsAdminUser(data, activeTokens, dataLock, httpRequest)) return Results.Forbid();
+    lock (dataLock)
+    {
+        return Results.Ok(new
+        {
+            users = data.Users.Count,
+            clients = data.Users.Count(user => user.Role == "client"),
+            professionals = data.Users.Count(user => user.Role is "professional" or "company"),
+            listings = data.Listings.Count,
+            projects = data.Projects.Count,
+            messages = data.Messages.Count
+        });
+    }
+});
+
+app.MapGet("/api/admin/users", (HttpRequest httpRequest) =>
+{
+    if (!IsAdminUser(data, activeTokens, dataLock, httpRequest)) return Results.Forbid();
+    lock (dataLock)
+    {
+        var users = data.Users
+            .OrderByDescending(user => user.CreatedAt)
+            .Select(user => new
+            {
+                user.Id,
+                user.Name,
+                user.Email,
+                user.Role,
+                user.Phone,
+                user.City,
+                user.CreatedAt
+            }).ToList();
+        return Results.Ok(users);
+    }
+});
+
+app.MapDelete("/api/admin/users/{userId}", (HttpRequest httpRequest, string userId) =>
+{
+    var adminId = GetAuthorizedUserId(httpRequest, activeTokens, dataLock);
+    if (!IsAdminUser(data, activeTokens, dataLock, httpRequest)) return Results.Forbid();
+    lock (dataLock)
+    {
+        if (userId == adminId) return Results.BadRequest(new { message = "Администраторът не може да изтрие собствената си сметка." });
+        var user = data.Users.FirstOrDefault(candidate => candidate.Id == userId);
+        if (user is null) return Results.NotFound(new { message = "Потребителят не е намерен." });
+        data.Users.Remove(user);
+        data.Projects.RemoveAll(project => project.UserId == userId || project.ProfessionalId == userId);
+        data.Listings.RemoveAll(listing => listing.UserId == userId);
+        data.PortfolioProjects.RemoveAll(project => project.UserId == userId);
+        data.Favorites.RemoveAll(favorite => favorite.UserId == userId || favorite.ProfessionalId == userId);
+        data.Reviews.RemoveAll(review => review.ReviewerId == userId || review.ProfessionalId == userId);
+        foreach (var token in activeTokens.Where(entry => entry.Value == userId).Select(entry => entry.Key).ToList())
+            activeTokens.Remove(token);
+        SaveData(dbFactory, data);
+        return Results.Ok(new { message = "Потребителят е премахнат." });
+    }
+});
+
+app.MapGet("/api/admin/listings", (HttpRequest httpRequest) =>
+{
+    if (!IsAdminUser(data, activeTokens, dataLock, httpRequest)) return Results.Forbid();
+    lock (dataLock)
+    {
+        var listings = data.Listings
+            .OrderByDescending(listing => listing.CreatedAt)
+            .Select(listing => new
+            {
+                listing.Id,
+                listing.UserId,
+                listing.Service,
+                listing.Title,
+                listing.City,
+                listing.Description,
+                listing.CreatedAt,
+                Owner = data.Users.FirstOrDefault(user => user.Id == listing.UserId)?.Name ?? "Неизвестен профил"
+            }).ToList();
+        return Results.Ok(listings);
+    }
+});
+
+app.MapDelete("/api/admin/listings/{listingId}", (HttpRequest httpRequest, string listingId) =>
+{
+    if (!IsAdminUser(data, activeTokens, dataLock, httpRequest)) return Results.Forbid();
+    lock (dataLock)
+    {
+        var listing = data.Listings.FirstOrDefault(candidate => candidate.Id == listingId);
+        if (listing is null) return Results.NotFound(new { message = "Обявата не е намерена." });
+        data.Listings.Remove(listing);
+        SaveData(dbFactory, data);
+        return Results.Ok(new { message = "Обявата е премахната." });
+    }
+});
+
+app.MapGet("/api/admin/projects", (HttpRequest httpRequest) =>
+{
+    if (!IsAdminUser(data, activeTokens, dataLock, httpRequest)) return Results.Forbid();
+    lock (dataLock)
+    {
+        var projects = data.Projects
+            .OrderByDescending(project => project.CreatedAt)
+            .Select(project => new
+            {
+                project.Id,
+                project.Name,
+                project.Phone,
+                project.Description,
+                project.Service,
+                project.City,
+                project.PreferredPeriod,
+                project.Status,
+                project.ProfessionalId,
+                project.CreatedAt,
+                Client = data.Users.FirstOrDefault(user => user.Id == project.UserId)?.Name ?? "Неизвестен клиент",
+                Professional = data.Users.FirstOrDefault(user => user.Id == project.ProfessionalId)?.Name ?? ""
+            }).ToList();
+        return Results.Ok(projects);
+    }
+});
+
+app.MapPut("/api/admin/projects/{projectId}/status", (HttpRequest httpRequest, string projectId, RequestStatusUpdate request) =>
+{
+    if (!IsAdminUser(data, activeTokens, dataLock, httpRequest)) return Results.Forbid();
+    if (request.Status is not ("Изпратено" or "Преглеждано" or "Прието" or "Отхвърлено" or "Завършено"))
+        return Results.BadRequest(new { message = "Невалиден статус." });
+    lock (dataLock)
+    {
+        var project = data.Projects.FirstOrDefault(candidate => candidate.Id == projectId);
+        if (project is null) return Results.NotFound(new { message = "Проектът не е намерен." });
+        project.Status = request.Status;
+        SaveData(dbFactory, data);
+        return Results.Ok(new { message = "Статусът е обновен.", project.Status });
+    }
+});
+
 app.MapFallback(async (HttpContext context) =>
 {
     context.Response.StatusCode = StatusCodes.Status404NotFound;
     await context.Response.WriteAsync("Not Found");
 });
 app.Run();
+
+static bool EnsureAdminAccount(AppData data)
+{
+    const string email = "admin@stroihub.bg";
+    const string password = "Admin123!";
+    var admin = data.Users.FirstOrDefault(user => user.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
+    if (admin is not null)
+    {
+        var changed = admin.Role != "admin" ||
+            admin.Name != "Администратор" ||
+            !VerifyPassword(password, admin.Password);
+        admin.Role = "admin";
+        admin.Name = "Администратор";
+        if (!VerifyPassword(password, admin.Password))
+            admin.Password = HashPassword(password);
+        return changed;
+    }
+
+    data.Users.Add(new User
+    {
+        Id = Guid.NewGuid().ToString("N"),
+        Name = "Администратор",
+        Email = email,
+        Password = HashPassword(password),
+        Role = "admin",
+        CreatedAt = DateTimeOffset.UtcNow
+    });
+    return true;
+}
+
+static bool EnsureDemoLoginAccounts(AppData data)
+{
+    var changed = false;
+
+    const string clientEmail = "client@stroihub.bg";
+    const string clientPassword = "Client123!";
+    var client = data.Users.FirstOrDefault(user => user.Email.Equals(clientEmail, StringComparison.OrdinalIgnoreCase));
+    if (client is null)
+    {
+        data.Users.Add(new User
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            Name = "Мария Иванова",
+            Email = "client@stroihub.bg",
+            Password = HashPassword(clientPassword),
+            Role = "client",
+            Phone = "0888123456",
+            City = "София",
+            Region = "София-град",
+            ProfilePhoto = "",
+            TermsAcceptedAt = DateTimeOffset.UtcNow,
+            PrivacyAcceptedAt = DateTimeOffset.UtcNow,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        changed = true;
+    }
+    else
+    {
+        if (client.Role != "client" || client.Name != "Мария Иванова" ||
+            !VerifyPassword(clientPassword, client.Password))
+        {
+            client.Role = "client";
+            client.Name = "Мария Иванова";
+            if (!VerifyPassword(clientPassword, client.Password))
+                client.Password = HashPassword(clientPassword);
+            changed = true;
+        }
+    }
+
+    const string masterEmail = "master@stroihub.bg";
+    const string masterPassword = "Master123!";
+    var master = data.Users.FirstOrDefault(user => user.Email.Equals(masterEmail, StringComparison.OrdinalIgnoreCase));
+    if (master is null)
+    {
+        master = new User
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            Name = "Георги Георгиев",
+            Email = "master@stroihub.bg",
+            Password = HashPassword(masterPassword),
+            Role = "professional",
+            Phone = "0888987654",
+            City = "София",
+            Region = "София-град",
+            PrimaryCategory = "Ремонти",
+            Categories = ["Ремонти"],
+            Services = ["Домашни ремонти"],
+            WorkPreference = "Самостоятелно",
+            ProfileDescription = "Предлагам надеждни домашни ремонти в София и съседните населени места.",
+            Experience = 10,
+            TermsAcceptedAt = DateTimeOffset.UtcNow,
+            PrivacyAcceptedAt = DateTimeOffset.UtcNow,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        data.Users.Add(master);
+        changed = true;
+    }
+    else
+    {
+        var normalized = master.Role is "professional" or "company";
+        if (!normalized || master.Name != "Георги Георгиев" ||
+            !VerifyPassword(masterPassword, master.Password))
+        {
+            master.Role = "professional";
+            master.Name = "Георги Георгиев";
+            if (!VerifyPassword(masterPassword, master.Password))
+                master.Password = HashPassword(masterPassword);
+            changed = true;
+        }
+    }
+
+    if (!data.Listings.Any(listing => listing.UserId == master.Id))
+    {
+        data.Listings.Add(new Listing
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            UserId = master.Id,
+            Service = "Домашни ремонти",
+            Title = "Домашни ремонти",
+            City = "София",
+            Description = "Поставяне на мебели, дребни поправки, монтажи и довършителни работи.",
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        changed = true;
+    }
+
+    return changed;
+}
+
+static bool IsAdminUser(AppData data, Dictionary<string, string> tokens, object dataLock, HttpRequest request)
+{
+    var userId = GetAuthorizedUserId(request, tokens, dataLock);
+    if (userId is null) return false;
+    return data.Users.Any(user => user.Id == userId && user.Role == "admin");
+}
 
 static string ResolveContentRoot()
 {
@@ -1054,8 +1296,8 @@ static AppData LoadData(
 {
     using var db = dbFactory.CreateDbContext();
     db.Database.EnsureCreated();
+    EnsureProjectOfferColumns(db);
     EnsureReviewsTable(db);
-    EnsureProfessionalDashboardSchema(db);
     var data = new AppData
     {
         Users = db.Users.AsNoTracking().ToList(),
@@ -1101,68 +1343,60 @@ static void EnsureReviewsTable(StroiHubDbContext db)
         "IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Reviews_ProjectId' AND object_id = OBJECT_ID(N'[Reviews]')) CREATE UNIQUE INDEX [IX_Reviews_ProjectId] ON [Reviews] ([ProjectId])");
 }
 
-static void EnsureProfessionalDashboardSchema(StroiHubDbContext db)
+static void EnsureProjectOfferColumns(StroiHubDbContext db)
 {
     if (db.Database.IsSqlite())
     {
-        EnsureSqliteColumn(db, "Users", "IsProfilePublic", "INTEGER NOT NULL DEFAULT 1");
-        EnsureSqliteColumn(db, "Users", "RequestNotifications", "INTEGER NOT NULL DEFAULT 1");
-        EnsureSqliteColumn(db, "Users", "ReviewNotifications", "INTEGER NOT NULL DEFAULT 1");
-        EnsureSqliteColumn(db, "Users", "IncomingRequestsViewedAt", "TEXT NULL");
-        EnsureSqliteColumn(db, "Users", "ProfileViews", "INTEGER NOT NULL DEFAULT 0");
-        EnsureSqliteColumn(db, "Listings", "Price", "TEXT NOT NULL DEFAULT ''");
-        EnsureSqliteColumn(db, "PortfolioProjects", "Image", "TEXT NOT NULL DEFAULT ''");
+        var connection = db.Database.GetDbConnection();
+        var closeConnection = connection.State != System.Data.ConnectionState.Open;
+        if (closeConnection) db.Database.OpenConnection();
+        var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = "PRAGMA table_info('Projects')";
+                using var reader = command.ExecuteReader();
+                while (reader.Read())
+                    columns.Add(reader.GetString(1));
+            }
+        }
+        finally
+        {
+            if (closeConnection) db.Database.CloseConnection();
+        }
+
+        if (!columns.Contains(nameof(Project.ProposedPeriod)))
+            db.Database.ExecuteSqlRaw("ALTER TABLE \"Projects\" ADD COLUMN \"ProposedPeriod\" TEXT NOT NULL DEFAULT ''");
+        if (!columns.Contains(nameof(Project.OfferedPrice)))
+            db.Database.ExecuteSqlRaw("ALTER TABLE \"Projects\" ADD COLUMN \"OfferedPrice\" TEXT NULL");
+        if (!columns.Contains(nameof(Project.OfferedPriceCurrency)))
+            db.Database.ExecuteSqlRaw("ALTER TABLE \"Projects\" ADD COLUMN \"OfferedPriceCurrency\" TEXT NOT NULL DEFAULT 'BGN'");
         return;
     }
 
     db.Database.ExecuteSqlRaw(
-        "IF COL_LENGTH('dbo.Users', 'IsProfilePublic') IS NULL ALTER TABLE [Users] ADD [IsProfilePublic] bit NOT NULL CONSTRAINT [DF_Users_IsProfilePublic] DEFAULT (1)");
+        "IF COL_LENGTH(N'dbo.Projects', N'ProposedPeriod') IS NULL ALTER TABLE [dbo].[Projects] ADD [ProposedPeriod] nvarchar(100) NOT NULL CONSTRAINT [DF_Projects_ProposedPeriod] DEFAULT N''");
     db.Database.ExecuteSqlRaw(
-        "IF COL_LENGTH('dbo.Users', 'RequestNotifications') IS NULL ALTER TABLE [Users] ADD [RequestNotifications] bit NOT NULL CONSTRAINT [DF_Users_RequestNotifications] DEFAULT (1)");
+        "IF COL_LENGTH(N'dbo.Projects', N'OfferedPrice') IS NULL ALTER TABLE [dbo].[Projects] ADD [OfferedPrice] decimal(18,2) NULL");
     db.Database.ExecuteSqlRaw(
-        "IF COL_LENGTH('dbo.Users', 'ReviewNotifications') IS NULL ALTER TABLE [Users] ADD [ReviewNotifications] bit NOT NULL CONSTRAINT [DF_Users_ReviewNotifications] DEFAULT (1)");
-    db.Database.ExecuteSqlRaw(
-        "IF COL_LENGTH('dbo.Users', 'IncomingRequestsViewedAt') IS NULL ALTER TABLE [Users] ADD [IncomingRequestsViewedAt] datetimeoffset NULL");
-    db.Database.ExecuteSqlRaw(
-        "IF COL_LENGTH('dbo.Users', 'ProfileViews') IS NULL ALTER TABLE [Users] ADD [ProfileViews] int NOT NULL CONSTRAINT [DF_Users_ProfileViews] DEFAULT (0)");
-    db.Database.ExecuteSqlRaw(
-        "IF COL_LENGTH('dbo.Listings', 'Price') IS NULL ALTER TABLE [Listings] ADD [Price] nvarchar(100) NOT NULL CONSTRAINT [DF_Listings_Price] DEFAULT ('')");
-    db.Database.ExecuteSqlRaw(
-        "IF COL_LENGTH('dbo.PortfolioProjects', 'Image') IS NULL ALTER TABLE [PortfolioProjects] ADD [Image] nvarchar(max) NOT NULL CONSTRAINT [DF_PortfolioProjects_Image] DEFAULT ('')");
+        "IF COL_LENGTH(N'dbo.Projects', N'OfferedPriceCurrency') IS NULL ALTER TABLE [dbo].[Projects] ADD [OfferedPriceCurrency] nvarchar(3) NOT NULL CONSTRAINT [DF_Projects_OfferedPriceCurrency] DEFAULT N'BGN'");
 }
 
-static void EnsureSqliteColumn(StroiHubDbContext db, string table, string column, string definition)
+static bool ConvertLegacyOfferPricesToEuro(AppData data)
 {
-    var connection = db.Database.GetDbConnection();
-    var closeConnection = connection.State != System.Data.ConnectionState.Open;
-    if (closeConnection)
-        db.Database.OpenConnection();
-
-    try
+    var changed = false;
+    foreach (var project in data.Projects)
     {
-        using (var command = connection.CreateCommand())
-        {
-            command.CommandText = $"PRAGMA table_info({QuoteSqliteIdentifier(table)})";
-            using var reader = command.ExecuteReader();
-            while (reader.Read())
-            {
-                if (string.Equals(reader.GetString(1), column, StringComparison.OrdinalIgnoreCase))
-                    return;
-            }
-        }
-        using var alterCommand = connection.CreateCommand();
-        alterCommand.CommandText = $"ALTER TABLE {QuoteSqliteIdentifier(table)} ADD COLUMN {QuoteSqliteIdentifier(column)} {definition}";
-        alterCommand.ExecuteNonQuery();
+        if (project.OfferedPrice is not { } legacyPrice ||
+            !string.Equals(project.OfferedPriceCurrency, "BGN", StringComparison.OrdinalIgnoreCase))
+            continue;
+        project.OfferedPrice = decimal.Round(legacyPrice / 1.95583m, 2, MidpointRounding.AwayFromZero);
+        project.OfferedPriceCurrency = "EUR";
+        changed = true;
     }
-    finally
-    {
-        if (closeConnection)
-            db.Database.CloseConnection();
-    }
+    return changed;
 }
-
-static string QuoteSqliteIdentifier(string identifier) =>
-    $"\"{identifier.Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
 
 static bool EnsureProfessionalListings(AppData data)
 {
@@ -1332,11 +1566,10 @@ static bool IsValidEmail(string? email)
 }
 
 static bool IsValidPassword(string? password) =>
-    password is { Length: >= 8 } &&
+    password is { Length: >= 8 and <= 128 } &&
     password.Any(char.IsUpper) &&
     password.Any(char.IsLower) &&
-    password.Any(char.IsDigit) &&
-    password.Any(character => !char.IsLetterOrDigit(character));
+    password.Any(char.IsDigit);
 
 static string NormalizePhone(string? phone) =>
     System.Text.RegularExpressions.Regex.Replace(phone?.Trim() ?? "", @"[\s().-]", "");
@@ -1357,6 +1590,102 @@ static bool IsCityInRegion(
     city is not null &&
     citiesByRegion.TryGetValue(region, out var cities) &&
     cities.Contains(city.Trim(), StringComparer.Ordinal);
+
+static List<string> GetProfessionalCities(User professional, IEnumerable<Listing> listings)
+{
+    var additionalCities = string.IsNullOrWhiteSpace(professional.AdditionalCities)
+        ? Array.Empty<string>()
+        : professional.AdditionalCities.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    return listings.Select(listing => listing.City)
+        .Append(professional.City)
+        .Concat(additionalCities)
+        .Where(city => !string.IsNullOrWhiteSpace(city))
+        .Select(city => city.Trim())
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToList();
+}
+
+static List<DateOnly> GetProfessionalBusyDates(AppData data, User professional)
+{
+    var busyDates = new HashSet<DateOnly>();
+    var today = DateOnly.FromDateTime(DateTime.Today);
+    var periodOffset = professional.Id.Sum(character => (int)character) % 3;
+    var monthStart = new DateOnly(today.Year, today.Month, 1);
+    var preferredDay = 26 + periodOffset;
+    var currentMonthLastDay = DateTime.DaysInMonth(monthStart.Year, monthStart.Month);
+    var samplePeriodStart = new DateOnly(
+        monthStart.Year,
+        monthStart.Month,
+        Math.Min(preferredDay, currentMonthLastDay - 2));
+    if (samplePeriodStart < today)
+    {
+        var nextMonth = monthStart.AddMonths(1);
+        var nextMonthLastDay = DateTime.DaysInMonth(nextMonth.Year, nextMonth.Month);
+        samplePeriodStart = new DateOnly(
+            nextMonth.Year,
+            nextMonth.Month,
+            Math.Min(preferredDay, nextMonthLastDay - 2));
+    }
+    for (var day = 0; day < 3; day++)
+        busyDates.Add(samplePeriodStart.AddDays(day));
+
+    foreach (var project in data.Projects.Where(project =>
+                 project.ProfessionalId == professional.Id &&
+                 project.Status is "Прието" or "В процес на обсъждане"))
+    {
+        if (TryParsePreferredPeriod(GetProjectPeriod(project), out var periodStart, out var periodEnd))
+        {
+            for (var date = periodStart; ; date = date.AddDays(1))
+            {
+                busyDates.Add(date);
+                if (date == periodEnd) break;
+            }
+        }
+    }
+
+    return busyDates.Order().ToList();
+}
+
+static bool TryParsePreferredDate(string? value, out DateOnly date) =>
+    DateOnly.TryParseExact(value, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out date) ||
+    DateOnly.TryParseExact(value, "dd.MM.yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out date);
+
+static bool TryParsePreferredPeriod(string? value, out DateOnly start, out DateOnly end)
+{
+    start = default;
+    end = default;
+    var dates = value?.Split('/');
+    if (dates is { Length: 2 } &&
+        TryParsePreferredDate(dates[0], out start) &&
+        TryParsePreferredDate(dates[1], out end))
+        return end >= start;
+    if (!TryParsePreferredDate(value, out start)) return false;
+    end = start;
+    return true;
+}
+
+static bool TryParseBookablePeriod(string? value, out DateOnly start, out DateOnly end)
+{
+    if (!TryParsePreferredPeriod(value, out start, out end) ||
+        start < DateOnly.FromDateTime(DateTime.Today) ||
+        end <= start ||
+        end > GetLatestSelectableDate())
+    {
+        start = default;
+        end = default;
+        return false;
+    }
+    return true;
+}
+
+static string GetProjectPeriod(Project project) =>
+    string.IsNullOrWhiteSpace(project.ProposedPeriod) ? project.PreferredPeriod : project.ProposedPeriod;
+
+static DateOnly GetLatestSelectableDate()
+{
+    var today = DateOnly.FromDateTime(DateTime.Today);
+    return new DateOnly(today.Year, today.Month, 1).AddMonths(13).AddDays(-1);
+}
 
 static bool IsServiceInCategory(string category, string service) => category switch
 {
@@ -1470,23 +1799,22 @@ record RegisterRequest(
 record LoginRequest(string Email, string Password);
 record PasswordResetRequest(string Email);
 record PasswordResetCompletionRequest(string Token, string Password);
-record AccountUpdateRequest(string Name, string Email, string? Phone, string? City, string? ProfileDescription, int? Experience, string? ProfilePhoto = null);
-record AccountSettingsRequest(bool RequestNotifications, bool ReviewNotifications, bool IsProfilePublic);
+record AccountUpdateRequest(string Name, string Email, string? Phone, string? City, string? ProfileDescription, int? Experience);
 record ProjectRequest(string Name, string Phone, string Description, string? Service, string? City, string? PreferredPeriod, string? ProfessionalId);
 record FavoritesRequest(List<string> ProfessionalIds);
 record RequestStatusUpdate(string Status);
+record IncomingRequestUpdate(string Status, string? ProposedPeriod = null, decimal? OfferedPrice = null);
 record ReviewRequest(string ProjectId, int Rating, string Comment);
 record PublishedReview(string Author, string AuthorPhoto, int Rating, string Comment, DateTimeOffset CreatedAt, bool IsDemo);
 record DemoReviewSeed(string Author, string Photo, int Rating, string Comment, int Day);
-record PortfolioRequest(string Title, string Category, string Description, string? Image = null);
-record ListingRequest(string Service, string City, string Description, string? Title, string? Price = null);
-record ListingUpdateRequest(string Service, string City, string Description, string? Title, string? Price = null);
+record PortfolioRequest(string Title, string Category, string Description);
+record ListingRequest(string Service, string City, string Description, string? Title);
 record ContactRequest(string Name, string Email, string Topic, string Message);
 class AppData { public List<User> Users { get; set; } = []; public List<Project> Projects { get; set; } = []; public List<Listing> Listings { get; set; } = []; public List<PortfolioProject> PortfolioProjects { get; set; } = []; public List<ContactMessage> Messages { get; set; } = []; public List<Favorite> Favorites { get; set; } = []; public List<Review> Reviews { get; set; } = []; }
-class User { public string Id { get; set; } = ""; public string Name { get; set; } = ""; public string Email { get; set; } = ""; public string Password { get; set; } = ""; public string Role { get; set; } = "client"; public string Phone { get; set; } = ""; public string City { get; set; } = ""; public string Region { get; set; } = ""; public string AdditionalCities { get; set; } = ""; public string PrimaryCategory { get; set; } = ""; public List<string> Categories { get; set; } = []; public List<string> Services { get; set; } = []; public string WorkPreference { get; set; } = ""; public string ProfessionalLink { get; set; } = ""; public string ProfilePhoto { get; set; } = ""; public List<string> PortfolioPhotos { get; set; } = []; public DateTimeOffset? TermsAcceptedAt { get; set; } public DateTimeOffset? PrivacyAcceptedAt { get; set; } public string ProfileDescription { get; set; } = ""; public int? Experience { get; set; } public bool IsProfilePublic { get; set; } = true; public bool RequestNotifications { get; set; } = true; public bool ReviewNotifications { get; set; } = true; public DateTimeOffset? IncomingRequestsViewedAt { get; set; } public int ProfileViews { get; set; } public string PasswordResetTokenHash { get; set; } = ""; public DateTimeOffset? PasswordResetExpiresAt { get; set; } public DateTimeOffset CreatedAt { get; set; } }
-class Project { public string Id { get; set; } = ""; public string UserId { get; set; } = ""; public string Name { get; set; } = ""; public string Phone { get; set; } = ""; public string Description { get; set; } = ""; public string Service { get; set; } = ""; public string City { get; set; } = ""; public string PreferredPeriod { get; set; } = ""; public string ProfessionalId { get; set; } = ""; public string Status { get; set; } = "Изпратено"; public DateTimeOffset CreatedAt { get; set; } }
-class Listing { public string Id { get; set; } = ""; public string UserId { get; set; } = ""; public string Service { get; set; } = ""; public string Title { get; set; } = ""; public string City { get; set; } = ""; public string Description { get; set; } = ""; public string Price { get; set; } = ""; public DateTimeOffset CreatedAt { get; set; } }
-class PortfolioProject { public string Id { get; set; } = ""; public string UserId { get; set; } = ""; public string Title { get; set; } = ""; public string Category { get; set; } = ""; public string Description { get; set; } = ""; public string Image { get; set; } = ""; public DateTimeOffset CreatedAt { get; set; } }
+class User { public string Id { get; set; } = ""; public string Name { get; set; } = ""; public string Email { get; set; } = ""; public string Password { get; set; } = ""; public string Role { get; set; } = "client"; public string Phone { get; set; } = ""; public string City { get; set; } = ""; public string Region { get; set; } = ""; public string AdditionalCities { get; set; } = ""; public string PrimaryCategory { get; set; } = ""; public List<string> Categories { get; set; } = []; public List<string> Services { get; set; } = []; public string WorkPreference { get; set; } = ""; public string ProfessionalLink { get; set; } = ""; public string ProfilePhoto { get; set; } = ""; public List<string> PortfolioPhotos { get; set; } = []; public DateTimeOffset? TermsAcceptedAt { get; set; } public DateTimeOffset? PrivacyAcceptedAt { get; set; } public string ProfileDescription { get; set; } = ""; public int? Experience { get; set; } public string PasswordResetTokenHash { get; set; } = ""; public DateTimeOffset? PasswordResetExpiresAt { get; set; } public DateTimeOffset CreatedAt { get; set; } }
+class Project { public string Id { get; set; } = ""; public string UserId { get; set; } = ""; public string Name { get; set; } = ""; public string Phone { get; set; } = ""; public string Description { get; set; } = ""; public string Service { get; set; } = ""; public string City { get; set; } = ""; public string PreferredPeriod { get; set; } = ""; public string ProposedPeriod { get; set; } = ""; public decimal? OfferedPrice { get; set; } public string OfferedPriceCurrency { get; set; } = "EUR"; public string ProfessionalId { get; set; } = ""; public string Status { get; set; } = "Изпратено"; public DateTimeOffset CreatedAt { get; set; } }
+class Listing { public string Id { get; set; } = ""; public string UserId { get; set; } = ""; public string Service { get; set; } = ""; public string Title { get; set; } = ""; public string City { get; set; } = ""; public string Description { get; set; } = ""; public DateTimeOffset CreatedAt { get; set; } }
+class PortfolioProject { public string Id { get; set; } = ""; public string UserId { get; set; } = ""; public string Title { get; set; } = ""; public string Category { get; set; } = ""; public string Description { get; set; } = ""; public DateTimeOffset CreatedAt { get; set; } }
 class Favorite { public string UserId { get; set; } = ""; public string ProfessionalId { get; set; } = ""; }
 class Review { public string Id { get; set; } = ""; public string ProjectId { get; set; } = ""; public string ProfessionalId { get; set; } = ""; public string ReviewerId { get; set; } = ""; public int Rating { get; set; } public string Comment { get; set; } = ""; public DateTimeOffset CreatedAt { get; set; } }
 class ContactMessage { public string Id { get; set; } = ""; public string Name { get; set; } = ""; public string Email { get; set; } = ""; public string Topic { get; set; } = ""; public string Message { get; set; } = ""; public DateTimeOffset CreatedAt { get; set; } }
@@ -1512,12 +1840,13 @@ class StroiHubDbContext(DbContextOptions<StroiHubDbContext> options) : DbContext
         ConfigureStringList(users.Property(user => user.Services));
         ConfigureStringList(users.Property(user => user.PortfolioPhotos));
 
-        modelBuilder.Entity<Project>().HasKey(project => project.Id);
-        var listings = modelBuilder.Entity<Listing>();
-        listings.HasKey(listing => listing.Id);
-        listings.Property(listing => listing.Price).HasMaxLength(100);
-        var portfolioProjects = modelBuilder.Entity<PortfolioProject>();
-        portfolioProjects.HasKey(project => project.Id);
+        var projects = modelBuilder.Entity<Project>();
+        projects.HasKey(project => project.Id);
+        projects.Property(project => project.ProposedPeriod).HasMaxLength(100);
+        projects.Property(project => project.OfferedPrice).HasPrecision(18, 2);
+        projects.Property(project => project.OfferedPriceCurrency).HasMaxLength(3).HasDefaultValue("EUR");
+        modelBuilder.Entity<Listing>().HasKey(listing => listing.Id);
+        modelBuilder.Entity<PortfolioProject>().HasKey(project => project.Id);
         var favorites = modelBuilder.Entity<Favorite>();
         favorites.HasKey(favorite => new { favorite.UserId, favorite.ProfessionalId });
         favorites.Property(favorite => favorite.UserId).HasMaxLength(64);

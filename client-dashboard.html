@@ -8,8 +8,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="dashboard.css?v=20261122-professional-portraits" />
-    <link rel="stylesheet" href="ui-refresh.css?v=20261122-preview-5" />
+    <link rel="stylesheet" href="dashboard.css?v=20261125-request-offers" />
+    <link rel="stylesheet" href="ui-refresh.css?v=20261125-request-targeting" />
+    <link rel="stylesheet" href="availability-calendar.css?v=20261125-availability-period" />
   </head>
   <body data-dashboard="client">
     <a class="skip-link" href="#main-content">Към основното съдържание</a>
@@ -79,14 +80,14 @@
             <a class="section-link" href="index.html#services">Всички категории</a>
           </div>
           <div class="category-grid">
-            <a class="category-tile" href="#specialists" data-category-filter="ВиК услуги"><img src="images/plumbing_services.jpg" alt="" /><span>ВиК услуги</span></a>
-            <a class="category-tile" href="#specialists" data-category-filter="Електро услуги"><img src="images/electrical_services.jpg" alt="" /><span>Електро услуги</span></a>
-            <a class="category-tile" href="#specialists" data-category-filter="Боядисване"><img src="images/painting.jpg" alt="" /><span>Боядисване</span></a>
-            <a class="category-tile" href="#specialists" data-category-filter="Строителство"><img src="images/construction.jpg" alt="" /><span>Строителство</span></a>
-            <a class="category-tile" href="#specialists" data-category-filter="Ремонти"><img src="images/repairs.jpg" alt="" /><span>Ремонти</span></a>
-            <a class="category-tile" href="#specialists" data-category-filter="Монтажи"><img src="images/montage.jpg" alt="" /><span>Монтажи</span></a>
-            <a class="category-tile" href="#specialists" data-category-filter="Дограма и остъкляване"><img src="images/glazing.jpg" alt="" /><span>Дограма и остъкляване</span></a>
-            <a class="category-tile" href="#specialists" data-category-filter="Почистване"><img src="images/cleaning.jpg" alt="" /><span>Почистване</span></a>
+            <a class="category-tile" href="#specialists" data-category-filter="ВиК услуги"><span class="category-tile-icon" data-service-icon="ВиК услуги" aria-hidden="true"></span><span>ВиК услуги</span></a>
+            <a class="category-tile" href="#specialists" data-category-filter="Електро услуги"><span class="category-tile-icon" data-service-icon="Електро услуги" aria-hidden="true"></span><span>Електро услуги</span></a>
+            <a class="category-tile" href="#specialists" data-category-filter="Боядисване"><span class="category-tile-icon" data-service-icon="Боядисване" aria-hidden="true"></span><span>Боядисване</span></a>
+            <a class="category-tile" href="#specialists" data-category-filter="Строителство"><span class="category-tile-icon" data-service-icon="Строителство" aria-hidden="true"></span><span>Строителство</span></a>
+            <a class="category-tile" href="#specialists" data-category-filter="Ремонти"><span class="category-tile-icon" data-service-icon="Ремонти" aria-hidden="true"></span><span>Ремонти</span></a>
+            <a class="category-tile" href="#specialists" data-category-filter="Монтажи"><span class="category-tile-icon" data-service-icon="Монтажи" aria-hidden="true"></span><span>Монтажи</span></a>
+            <a class="category-tile" href="#specialists" data-category-filter="Дограма и остъкляване"><span class="category-tile-icon" data-service-icon="Дограма и остъкляване" aria-hidden="true"></span><span>Дограма и остъкляване</span></a>
+            <a class="category-tile" href="#specialists" data-category-filter="Почистване"><span class="category-tile-icon" data-service-icon="Почистване" aria-hidden="true"></span><span>Почистване</span></a>
           </div>
         </section>
 
@@ -102,7 +103,7 @@
         <section class="dashboard-section" id="requests">
           <div class="section-title">
             <div><span class="eyebrow">ТВОИТЕ ПРОЕКТИ</span><h2>Моите заявки</h2></div>
-            <button class="button button-primary button-small" type="button" data-open-dialog="request-dialog">Нова заявка</button>
+            <a class="button button-primary button-small" href="#specialists">Избери майстор</a>
           </div>
           <div class="request-list" id="request-list" aria-live="polite"><p class="empty-copy">Зареждане на запитванията…</p></div>
         </section>
@@ -141,17 +142,34 @@
         <button class="dialog-close" type="button" aria-label="Затвори" data-close-dialog>Затвори</button>
         <span class="eyebrow">НОВ ПРОЕКТ</span><h2 id="request-dialog-title">Изпрати заявка</h2>
         <p>Опиши проекта си. Запитването ще бъде изпратено до избрания специалист.</p>
-        <label>Специалист<select name="professionalId" required><option value="">Избери специалист</option></select></label>
-        <label>Услуга<select name="service" required><option value="">Избери услуга</option><option>ВиК услуги</option><option>Електро услуги</option><option>Боядисване</option><option>Строителство</option><option>Ремонти</option><option>Монтажи</option><option>Дограма и остъкляване</option><option>Почистване</option></select></label>
-        <label>Населено място<input name="city" required maxlength="80" placeholder="Например София" /></label>
+        <label>Избран специалист<input name="professionalName" readonly placeholder="Избери майстор от профила му" /></label>
+        <input name="professionalId" type="hidden" />
+        <label>Услуга<select name="service" required disabled><option value="">Първо избери майстор</option></select></label>
+        <label>Населено място<select name="city" required disabled><option value="">Първо избери майстор</option></select></label>
         <label>Описание на проекта<textarea name="description" required rows="4" maxlength="2000" placeholder="Каква работа трябва да бъде извършена?"></textarea></label>
-        <label>Предпочитан период<input name="preferredPeriod" maxlength="100" placeholder="Например през следващия месец" /></label>
+        <label>Избран период<input class="availability-calendar-date" name="preferredPeriodDisplay" readonly placeholder="Избери начало и край на периода" /></label>
+        <input name="preferredPeriod" type="hidden" />
+        <div class="availability-calendar" data-availability-calendar>
+          <div class="availability-calendar-heading">
+            <strong data-calendar-month></strong>
+            <div class="availability-calendar-navigation">
+              <button type="button" data-calendar-previous aria-label="Предишен месец">‹</button>
+              <button type="button" data-calendar-next aria-label="Следващ месец">›</button>
+            </div>
+          </div>
+          <div class="availability-calendar-weekdays" aria-hidden="true"><span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Нд</span></div>
+          <div class="availability-calendar-days" data-calendar-days role="group" aria-label="Избери начална и крайна дата за периода"></div>
+          <div class="availability-calendar-legend"><span><i></i> Свободен ден</span><span class="busy"><i></i> Зает период</span></div>
+          <p class="availability-calendar-status" data-calendar-status role="status"></p>
+        </div>
         <label>Телефон за контакт<input name="phone" type="tel" autocomplete="tel" required maxlength="40" /></label>
         <button class="button button-primary" type="submit">Изпрати запитване</button>
         <p class="form-feedback" id="request-feedback" role="status"></p>
       </form>
     </dialog>
     <div class="toast" id="dashboard-toast" role="status" aria-live="polite"></div>
-    <script src="dashboard.js?v=20261118-search-filters-v2" defer></script>
+    <script src="service-icons.js?v=20261124-simple-service-icons" defer></script>
+    <script src="availability-calendar.js?v=20261125-availability-period" defer></script>
+    <script src="dashboard.js?v=20261125-euro-calendar" defer></script>
   </body>
 </html>

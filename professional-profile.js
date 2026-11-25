@@ -40,6 +40,13 @@ function updateProfileHeader() {
       ? "professional-dashboard.html"
       : "client-dashboard.html";
     action.textContent = "Моят профил";
+    if (user.profilePhoto) {
+      const image = document.createElement("img");
+      image.className = "profile-header-photo";
+      image.src = user.profilePhoto;
+      image.alt = "";
+      action.prepend(image);
+    }
     profileHeaderUser.replaceChildren(action);
     return;
   }
@@ -236,8 +243,7 @@ async function loadProfessionalProfile() {
         Object.assign(document.createElement("span"), {className:"service-tag",textContent:listing.service}),
         Object.assign(document.createElement("h3"), {textContent:listing.title || listing.service}),
         Object.assign(document.createElement("p"), {textContent:listing.description}),
-        Object.assign(document.createElement("small"), {textContent:listing.city}),
-        Object.assign(document.createElement("strong"), {className:"service-price",textContent:listing.price || "Цена по договаряне"})
+        Object.assign(document.createElement("small"), {textContent:listing.city})
       );
       card.append(image, copy);
       profileListings.append(card);
@@ -246,7 +252,7 @@ async function loadProfessionalProfile() {
       const card = document.createElement("article");
       card.className = "portfolio-card";
       const image = document.createElement("img");
-      image.src = project.image || profileImages[project.category] || "images/platform-overview.jpg";
+      image.src = profileImages[project.category] || "images/platform-overview.jpg";
       image.alt = project.category;
       const copy = document.createElement("div");
       copy.append(
@@ -273,6 +279,11 @@ async function loadProfessionalProfile() {
     await loadEligibleReviewProjects();
     document.querySelector("#send-request").addEventListener("click", () => {
       const token = localStorage.getItem("stroihub_token") || sessionStorage.getItem("stroihub_token");
+      const user = getStoredProfileUser();
+      if (token && user?.role !== "client") {
+        showProfileToast("Изпращането на заявки е достъпно за клиентски профили.");
+        return;
+      }
       if (!token) {
         location.href = `login.html?returnTo=${encodeURIComponent(`client-dashboard.html?professionalId=${profile.id}`)}`;
         return;

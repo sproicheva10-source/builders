@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="dashboard.css?v=20261122-professional-portraits" />
     <link rel="stylesheet" href="auth-pages.css?v=20261122-responsive-accessibility-2" />
     <link rel="stylesheet" href="ui-refresh.css?v=20261122-preview-5" />
-    <script src="auth-pages.js?v=20261124-auth-reset-ux" defer></script>
+    <script src="auth-pages.js?v=20261124-role-dashboard-routing" defer></script>
   </head>
   <body class="auth-page login-page">
     <a class="skip-link" href="#main-content">Към формата за вход</a>
@@ -23,7 +23,7 @@
         <p class="login-intro">Влез, за да управляваш профила и проектите си.</p>
         <form class="auth-page-form" data-auth-form="login">
           <label>Имейл адрес<input required type="email" name="email" maxlength="254" autocomplete="email" /></label>
-          <label>Парола<input required type="password" name="password" minlength="6" autocomplete="current-password" /></label>
+          <label>Парола<div class="password-field"><input required type="password" name="password" minlength="6" autocomplete="current-password" /><button type="button" data-toggle-password aria-label="Покажи паролата" aria-pressed="false">Покажи</button></div></label>
           <label class="checkbox-row"><input type="checkbox" name="remember" checked /> Запомни ме на това устройство</label>
           <button class="button button-primary auth-page-submit" type="submit">Вход</button>
           <p class="auth-page-status" role="status" aria-live="polite"></p>
