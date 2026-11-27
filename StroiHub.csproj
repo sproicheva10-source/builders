@@ -5,6 +5,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
+    <None Update="*.html;*.css;*.js;*.png;locations.json;images\**\*"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.34" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.34" />
   </ItemGroup>
