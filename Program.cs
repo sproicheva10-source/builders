@@ -33,8 +33,7 @@ var legacyDataPath = Path.Combine(app.Environment.ContentRootPath, "data.json");
 var dataLock = new object();
 var dbFactory = app.Services.GetRequiredService<IDbContextFactory<StroiHubDbContext>>();
 var data = LoadData(dbFactory, legacyDataPath);
-var dataChanged = app.Environment.IsDevelopment() &&
-    EnsureDemoProfessionals(data, app.Environment.ContentRootPath);
+var dataChanged = EnsureDemoProfessionals(data, app.Environment.ContentRootPath);
 if (ConvertLegacyOfferPricesToEuro(data))
     dataChanged = true;
 if (EnsureAdminAccount(data))
